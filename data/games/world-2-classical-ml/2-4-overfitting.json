@@ -92,7 +92,8 @@
         "degree": 3,
         "degreeRange": [1, 14],
         "lambda": 0,
-        "lambdaRange": [0, 3]
+        "lambdaRange": [0, 3],
+        "maxValidationLoss": 0.1
       },
       "passCriteria": {
         "metric": "generalizationGap",

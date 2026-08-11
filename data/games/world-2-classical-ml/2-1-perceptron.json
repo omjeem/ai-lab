@@ -62,7 +62,7 @@
         "initialWeights": [0, 0],
         "initialBias": 0,
         "maxSteps": 600,
-        "noise": 0.05
+        "noise": 0
       },
       "passCriteria": {
         "metric": "convergenceSteps",

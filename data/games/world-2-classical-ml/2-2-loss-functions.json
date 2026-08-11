@@ -81,8 +81,8 @@
       },
       "starsRules": [
         { "threshold": 2.4, "stars": 1 },
-        { "threshold": 2.1, "stars": 2 },
-        { "threshold": 1.9, "stars": 3 }
+        { "threshold": 2.15, "stars": 2 },
+        { "threshold": 2.02, "stars": 3 }
       ],
       "xpReward": 35
     },

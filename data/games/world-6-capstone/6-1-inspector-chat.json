@@ -98,7 +98,7 @@
       "id": "6-1-l3",
       "title": "Local versus Cloud",
       "difficulty": "hard",
-      "instructions": "Same prompt, two models — the 1B running on your machine and a much larger one in the cloud. Predict where they will diverge and which differences come from scale rather than sampling. The cloud toggle needs a connection; the local model does not.",
+      "instructions": "Same prompt, two models — the 1B running on your machine and a much larger one in the cloud. For each axis, predict whether the bigger model will score higher, then check against the measurement taken from both generation traces. The cloud toggle needs a connection; the local model does not.",
       "engineType": "inspectorChat",
       "engineConfig": {
         "mode": "compare-scale",
@@ -110,7 +110,7 @@
         "cloudEscalation": true,
         "cloudRequiresOnline": true,
         "rounds": 3,
-        "comparisonAxes": ["factuality", "verbosity", "instructionFollowing", "refusalBehaviour"]
+        "comparisonAxes": ["verbosity", "confidence", "diversity", "decisiveness"]
       },
       "passCriteria": {
         "metric": "comparisonScore",

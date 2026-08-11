@@ -50,14 +50,14 @@
       "id": "5-1-l2",
       "title": "Keep Positions Distinct",
       "difficulty": "medium",
-      "instructions": "Set the model dimension and frequency base so that every position in the sequence stays distinguishable from every other. Distinctness is measured as the worst-case similarity between any two position vectors.",
+      "instructions": "Set the model dimension and frequency base so that positions across the sequence stay distinguishable. Distinctness is one minus the average similarity between position vectors — nearby positions are meant to resemble each other, so the average is what matters, not the closest pair. More dimensions only help while the base is small enough to give them different frequencies.",
       "engineType": "positionalEncoding",
       "engineConfig": {
         "mode": "tune-distinctness",
-        "dModel": 8,
+        "dModel": 4,
         "dModelOptions": [4, 8, 16, 32, 64, 128],
         "maxPosition": 64,
-        "base": 100,
+        "base": 100000,
         "baseRange": [10, 100000],
         "seed": 3
       },
@@ -69,7 +69,7 @@
       "starsRules": [
         { "threshold": 0.55, "stars": 1 },
         { "threshold": 0.72, "stars": 2 },
-        { "threshold": 0.85, "stars": 3 }
+        { "threshold": 0.84, "stars": 3 }
       ],
       "xpReward": 45
     },

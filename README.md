@@ -1,36 +1,232 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Learning Lab
 
-## Getting Started
+A browser-based course that teaches how language models work by making you operate one. Real
+embeddings, real attention weights, real gradients — computed live on your machine and manipulated
+directly, rather than described to you. There is no chatbot anywhere in the learning path.
 
-First, run the development server:
+22 chapters across 6 worlds, from "what is a vector" to inspecting a 1B instruct model's own
+next-token distributions.
+
+---
+
+## Status
+
+| Layer | State |
+| --- | --- |
+| Curriculum (22 chapters, 67 levels) | Complete, schema-validated |
+| Game logic engines (22) | Complete, 732 tests passing |
+| Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
+| Core UI shell, world map, onboarding, chapter frame | Complete |
+| Per-chapter game canvases | **1 of 22 built** (`1-1-vectors`) |
+| Backend, admin, offline sync, PWA | Complete |
+
+Every chapter's logic is finished and tested. What is largely outstanding is the per-chapter
+visualisation layer: chapters without a canvas open, load their model, and show an explicit
+"instrument not wired up yet" panel rather than an empty screen. See
+[Adding a chapter's canvas](#adding-a-chapters-canvas).
+
+---
+
+## Tech stack
+
+- **Next.js 15** (App Router), TypeScript strict mode
+- **Tailwind CSS 4** with CSS custom properties for the per-world theming
+- **Motion** (`motion/react`) for state transitions, unlock sequences and score reveals
+- **Zustand** persisted to IndexedDB for progress and offline resume
+- **@huggingface/transformers** for embeddings, tokenization, small causal LMs and attention
+- **@mlc-ai/web-llm** for the World 6 local capstone model
+- **Ollama Cloud** for the single optional cloud escalation, proxied server-side
+- **MongoDB** via the official driver, reached only from API routes
+- **idb** for the IndexedDB layer (progress, activity queue, model records)
+- **Vitest** for the engine and library test suites
+- **pnpm**
+
+---
+
+## Local setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.local.example .env.local   # then fill in what you need
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app runs with **no environment configuration at all** — every browser-tier chapter works, and
+onboarding and activity fall back to local-only. Configure the environment when you want persistence,
+the admin dashboard, or the cloud escalation.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required for | Where to get it |
+| --- | --- | --- |
+| `MONGODB_URI` | Storing users and activity | MongoDB Atlas → Cluster → Connect → Drivers. Without it, `/api/users` and `/api/activity` accept and discard, so the client never retries forever. |
+| `MONGODB_DB` | Database name | Any name; defaults to `ai_learning_lab`. |
+| `ADMIN_EMAIL` | Admin login | Your choice. |
+| `ADMIN_PASSWORD_HASH` | Admin login | Generate with `pnpm hash:password 'your-password'`. Only the hash is stored — never the plaintext. |
+| `ADMIN_SESSION_SECRET` | Signing the admin session cookie | `openssl rand -hex 32` |
+| `ADMIN_SESSION_HOURS` | Session lifetime | Optional, defaults to `12`. Refreshed on activity. |
+| `OLLAMA_CLOUD_API_KEY` | World 6 cloud escalation | ollama.com → Settings → API keys. Never reaches the browser. |
+| `OLLAMA_CLOUD_MODEL_ID` | World 6 cloud escalation | e.g. `gpt-oss:120b-cloud` |
+| `OLLAMA_CLOUD_BASE_URL` | World 6 cloud escalation | Optional, defaults to `https://ollama.com`. |
+| `GEO_LOOKUP_URL` | Optional IP geolocation | A provider of your own, with `{ip}` as the placeholder — e.g. `https://ipapi.co/{ip}/json/`. Unset means no geo lookup happens at all. |
+| `GEO_LOOKUP_API_KEY` | Optional IP geolocation | Only if your provider needs one. |
+| `RATE_LIMIT_ACTIVITY_PER_MIN` | Tuning | Optional, defaults to `60` per IP. |
+| `RATE_LIMIT_CLOUD_INFERENCE_PER_MIN` | Tuning | Optional, defaults to `10` per IP. |
 
-## Learn More
+### Generating the admin password hash
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm hash:password 'a-long-password-you-choose'
+# → ADMIN_PASSWORD_HASH="scrypt$<salt>$<hash>"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Paste the line into `.env.local`. The script refuses passwords under 12 characters.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Commands
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm dev              # validates the curriculum, then starts the dev server
+pnpm build            # validates the curriculum, then builds
+pnpm test             # 732 unit tests, fully offline, no model downloads
+pnpm test:watch
+pnpm test:coverage
+pnpm typecheck        # tsc --noEmit
+pnpm lint
+pnpm validate:games   # schema + cross-file curriculum validation
+pnpm hash:password    # admin password hash
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`pnpm validate:games` runs automatically before `dev` and `build`, so a malformed level config can
+never reach the browser.
+
+---
+
+## Project structure
+
+```
+/data/games/            22 chapter definitions + curriculum-manifest.json
+/public/corpora/        Bundled public-domain text the n-gram and RNN chapters count from
+/scripts/               validate-games, calibrate-levels, hash-password
+/src/engines/           Pure game logic, one module per game type. No React, no DOM.
+/src/models/            Model lifecycle: transformers.js wrappers, WebLLM, the hand-rolled
+                        TinyNet and TinyRNN, caching and progress
+/src/components/        UI: design-system primitives, world map, chapter shell, game canvases
+/src/lib/               MongoDB, admin auth, offline queue, sync manager, rate limiting
+/src/store/             Zustand stores (durable progress, per-run session state)
+/src/types/             Zod schemas and shared types
+/tests/                 Mirrors src/engines, src/models and src/lib
+```
+
+### The two rules that shape everything
+
+**Game logic lives in JSON, never in components.** Every level's parameters, pass criteria and star
+bands come from `/data/games/**`. Components render engine state; they never own rules.
+
+**Engines are pure and take their models by injection.** An engine never imports a model wrapper.
+It receives one through a `prepare(config, deps)` parameter, which is why the whole test suite runs
+offline in about a second with no downloads, while the app injects the real transformers.js wrapper
+into the identical code path.
+
+```ts
+// Every engine exposes the same shape.
+prepare(config, deps)          // optional; runs the real model, returns derived data
+initState(config, rules, prepared)
+applyAction(state, action)     // pure reducer, never mutates
+evaluate(state) → ScoreResult
+```
+
+---
+
+## Adding a new chapter
+
+1. **Write the JSON** in `/data/games/world-N-.../<id>.json`, matching the Zod schema in
+   `src/types/game.ts`. Run `pnpm validate:games` — it checks the schema plus the cross-file
+   invariants: manifest agreement, unlock-graph cycles, XP sums, and that an engine exists.
+2. **Write the engine test** in `/tests/engines/<name>Engine.test.ts` first. Cover the initial state,
+   valid transitions, invalid and edge-case input, scoring against each level's real config, and — for
+   model-backed engines — behaviour with a fake model injected.
+3. **Write the engine** in `/src/engines/<name>Engine.ts` until the tests pass. Keep it free of React
+   and DOM imports.
+4. **Wire the model**, if it needs one, by implementing or reusing an interface from
+   `src/engines/deps.ts`.
+5. **Build the canvas** in `/src/components/games/<chapter-id>/` and register it in
+   `src/components/games/registry.tsx`.
+6. **Add it to `curriculum-manifest.json`** with its unlock requirements.
+
+### Adding a chapter's canvas
+
+`src/components/games/registry.tsx` maps a chapter id to a lazily-loaded component. Use
+`1-1-vectors/VectorCanvas.tsx` as the reference: it wraps its content in `<ModelGate>` (which owns
+download progress, the failure state and retry), drives the engine through `applyAction`, reports the
+live score to the HUD via `onScore`, and submits with `onSubmit`.
+
+---
+
+## Keeping levels honest
+
+`pnpm tsx scripts/calibrate-levels.ts` plays every pure-computation level optimally and reports
+whether its pass and 3-star thresholds are actually reachable.
+
+This is not decoration. It caught four levels whose thresholds could never be met, and two whose
+scoring could be gamed:
+
+- A level scored "steps to converge" on data that label noise had made non-separable, so convergence
+  was impossible by construction.
+- Two levels had 3-star bands set beyond the achievable optimum.
+- `2-4-l3` minimised the generalisation gap, which is trivially won by flattening the fit into a
+  useless constant. Gap-scored levels now carry a `maxValidationLoss` ceiling.
+- `3-4-l2` asked about batch size while the architecture was fixed at one that cannot learn the
+  dataset at all, so it was scoring noise.
+
+Add a case to the script whenever you add a pure-computation level. Model-backed levels are
+calibrated against the real model in the browser instead.
+
+---
+
+## What "real" means here
+
+The differentiator is that nothing shown to the player is fabricated:
+
+- Word clusters come from k-means over live embeddings, and label truth from embedding the candidate
+  labels — there is no answer key in the JSON.
+- The BPE merge puzzle is scored against the tokenizer's own merge-rank table.
+- `TinyNet` and `TinyRNN` are hand-written networks with real forward and backward passes; their
+  analytic gradients are verified against numerical ones in the test suite.
+- World 4.2's memory decay is measured by running two sequences that differ in one early token
+  through the trained RNN and comparing its actual hidden states as the difference is overwritten.
+- n-gram tables are counted from a bundled corpus at runtime, so changing the corpus changes the model.
+- Attention weights and hidden states are read from a real transformer's forward pass. If the ONNX
+  export does not expose them, the chapter says so and offers a retry rather than showing something
+  plausible.
+- The cloud endpoint returns no per-token detail, so the inspector shows an empty trace rather than
+  invented probabilities.
+
+---
+
+## Offline behaviour
+
+After the first visit, and once a chapter's model has been fetched once, Worlds 1–5 work with no
+network:
+
+- Model weights are cached by transformers.js and WebLLM in the browser's Cache Storage.
+- The service worker caches the app shell and the bundled corpora. It deliberately does not re-cache
+  model weights, which would double the storage cost for no benefit.
+- Progress persists to IndexedDB and hydrates without a spinner.
+- Activity is queued locally and synced when connectivity returns. The sync manager treats
+  `navigator.onLine` and a real request to `/api/activity` as two separate signals, and clears only
+  the event ids the server confirms.
+- World 6's cloud toggle is disabled while offline; the local model beside it keeps working.
+
+To verify: load the app, open a World 1 chapter so its model caches, then set DevTools → Network →
+Offline and reload.
+
+---
+
+## Privacy
+
+Onboarding shows a one-line, non-blocking disclosure before anything is collected. What is stored:
+display name, a client-generated id, IP address, approximate location (only when the operator
+configures their own lookup), user agent, referrer, language, timezone and screen size. There is no
+canvas or font fingerprinting. `/api/activity` is write-only and never returns anyone's data.

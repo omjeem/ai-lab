@@ -69,8 +69,8 @@
       },
       "starsRules": [
         { "threshold": 220, "stars": 1 },
-        { "threshold": 170, "stars": 2 },
-        { "threshold": 140, "stars": 3 }
+        { "threshold": 200, "stars": 2 },
+        { "threshold": 187, "stars": 3 }
       ],
       "xpReward": 45
     },
@@ -89,7 +89,7 @@
         "smoothingAlpha": 0.05,
         "smoothingAlphaRange": [0.001, 1],
         "heldOutSplit": 0.2,
-        "minCoverage": 0.5
+        "minCoverage": 0.3
       },
       "passCriteria": {
         "metric": "sparsityScore",
@@ -98,8 +98,8 @@
       },
       "starsRules": [
         { "threshold": 0.55, "stars": 1 },
-        { "threshold": 0.7, "stars": 2 },
-        { "threshold": 0.85, "stars": 3 }
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 0.95, "stars": 3 }
       ],
       "xpReward": 50
     }

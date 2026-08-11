@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "id": "2-3-gradient-descent",
+  "world": 2,
+  "worldTitle": "Classical ML",
+  "chapterTitle": "Gradient Descent",
+  "order": 3,
+  "concept": {
+    "shortExplanation": "Given a loss, the gradient tells you which direction increases it fastest. Step the other way, repeatedly, and you descend. That is the entire optimisation story behind every model in this course — the only thing that changes at scale is how many parameters you are stepping at once. The learning rate decides how far each step goes, and it is genuinely the difference between converging, crawling and exploding.",
+    "ahaMoment": "Nothing here knows where the minimum is. Each step only uses the slope directly underfoot, which is why a bad learning rate can oscillate forever across a valley it could have walked straight down."
+  },
+  "modelRequirement": {
+    "tier": "none",
+    "modelId": null,
+    "estimatedSizeMB": null,
+    "fallbackMessage": null,
+    "loadFailureMessage": null
+  },
+  "xpReward": 130,
+  "unlockRequires": ["2-2-loss-functions"],
+  "levels": [
+    {
+      "id": "2-3-l1",
+      "title": "Find the Valley",
+      "difficulty": "easy",
+      "instructions": "Set a learning rate and run. Reach the minimum of this quadratic surface. Gradients are computed analytically at your current position on every step.",
+      "engineType": "gradientDescent",
+      "engineConfig": {
+        "surface": "quadratic",
+        "startPoint": [3.5, -2.8],
+        "learningRate": 0.1,
+        "learningRateRange": [0.001, 1.2],
+        "maxSteps": 100,
+        "convergenceEpsilon": 0.01
+      },
+      "passCriteria": {
+        "metric": "finalLoss",
+        "threshold": 0.05,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.05, "stars": 1 },
+        { "threshold": 0.01, "stars": 2 },
+        { "threshold": 0.002, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "2-3-l2",
+      "title": "The Ravine",
+      "difficulty": "medium",
+      "instructions": "This surface is steep in one direction and nearly flat in the other. A learning rate that works for one axis fails on the other. Reach the minimum inside the step budget — momentum is available if you want it.",
+      "engineType": "gradientDescent",
+      "engineConfig": {
+        "surface": "ravine",
+        "startPoint": [-4, 3.2],
+        "learningRate": 0.05,
+        "learningRateRange": [0.001, 0.6],
+        "momentum": 0,
+        "momentumRange": [0, 0.99],
+        "maxSteps": 150,
+        "convergenceEpsilon": 0.01
+      },
+      "passCriteria": {
+        "metric": "stepsToConverge",
+        "threshold": 120,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 120, "stars": 1 },
+        { "threshold": 60, "stars": 2 },
+        { "threshold": 30, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "2-3-l3",
+      "title": "Escape the Local Minimum",
+      "difficulty": "hard",
+      "instructions": "This surface has more than one basin. Starting where you are, the nearest minimum is not the best one. Reach the global minimum.",
+      "engineType": "gradientDescent",
+      "engineConfig": {
+        "surface": "multi-basin",
+        "startPoint": [1.8, 1.4],
+        "learningRate": 0.03,
+        "learningRateRange": [0.001, 0.8],
+        "momentum": 0,
+        "momentumRange": [0, 0.99],
+        "noiseScale": 0,
+        "noiseRange": [0, 0.5],
+        "seed": 42,
+        "maxSteps": 400,
+        "convergenceEpsilon": 0.01,
+        "globalMinimumValue": -1.8
+      },
+      "passCriteria": {
+        "metric": "finalLoss",
+        "threshold": -1.5,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": -1.5, "stars": 1 },
+        { "threshold": -1.7, "stars": 2 },
+        { "threshold": -1.78, "stars": 3 }
+      ],
+      "xpReward": 50
+    },
+    {
+      "id": "2-3-l4",
+      "title": "The Real Surface",
+      "difficulty": "hard",
+      "instructions": "Stretch level. This is not a synthetic bowl — it is the genuine loss surface of the live-trained network from Layers & Forward Pass, sliced along two of its real weights and evaluated on demand. Descend it.",
+      "engineType": "gradientDescent",
+      "engineConfig": {
+        "surface": "liveNet",
+        "surfaceSource": {
+          "chapter": "3-2-layers-forward-pass",
+          "dataset": "circles",
+          "sliceWeights": [0, 5],
+          "resolution": 24
+        },
+        "startPoint": [1.2, -1.6],
+        "learningRate": 0.08,
+        "learningRateRange": [0.001, 0.8],
+        "momentum": 0.5,
+        "momentumRange": [0, 0.99],
+        "maxSteps": 200,
+        "convergenceEpsilon": 0.005
+      },
+      "passCriteria": {
+        "metric": "finalLoss",
+        "threshold": 0.35,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.35, "stars": 1 },
+        { "threshold": 0.25, "stars": 2 },
+        { "threshold": 0.18, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "optional": true
+    }
+  ]
+}

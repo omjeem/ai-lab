@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "id": "1-3-similarity-distance",
+  "world": 1,
+  "worldTitle": "Fundamentals",
+  "chapterTitle": "Similarity & Distance",
+  "order": 3,
+  "concept": {
+    "shortExplanation": "Once meaning is geometry, comparing two words becomes a distance calculation. Cosine similarity measures the angle between two vectors and ignores their length, which is why it is the default choice — it asks whether two words point the same way, not how emphatic they are. Euclidean distance answers a different question and will rank things differently. Every number in this chapter is computed live from real embeddings.",
+    "ahaMoment": "Retrieval, search, recommendation and RAG are all this one operation at scale: embed everything once, then answer queries by finding the nearest angle. The whole retrieval industry is a dot product with good indexing."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "Xenova/all-MiniLM-L6-v2",
+    "estimatedSizeMB": 23,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The embedding model could not be downloaded. Check your connection and retry — once cached, this chapter runs fully offline."
+  },
+  "xpReward": 140,
+  "unlockRequires": ["1-2-vector-arithmetic"],
+  "levels": [
+    {
+      "id": "1-3-l1",
+      "title": "Rank by Similarity",
+      "difficulty": "easy",
+      "instructions": "Drag the words into order, nearest to the anchor word at the top. Your ordering is compared against the real cosine ranking using rank correlation.",
+      "engineType": "similarityRank",
+      "engineConfig": {
+        "mode": "rank",
+        "anchor": "doctor",
+        "words": ["nurse", "surgeon", "hospital", "lawyer", "bicycle"],
+        "metric": "cosine"
+      },
+      "passCriteria": {
+        "metric": "rankCorrelation",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 0.95, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "1-3-l2",
+      "title": "Odd One Out",
+      "difficulty": "medium",
+      "instructions": "One word in each set sits furthest from the others in embedding space. Find it. The outlier is determined live by mean pairwise cosine similarity, not by a stored answer.",
+      "engineType": "similarityRank",
+      "engineConfig": {
+        "mode": "odd-one-out",
+        "sets": [
+          ["piano", "guitar", "drums", "avalanche"],
+          ["mercury", "venus", "saturn", "diploma"],
+          ["copper", "iron", "zinc", "sonnet"]
+        ],
+        "metric": "cosine"
+      },
+      "passCriteria": {
+        "metric": "oddOneOutAccuracy",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.99, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "1-3-l3",
+      "title": "Cosine vs Euclidean",
+      "difficulty": "hard",
+      "instructions": "Bring your own words. Build a set of five, then predict which pairs the two metrics will disagree about. The heatmap recomputes live under both metrics as you type.",
+      "engineType": "similarityRank",
+      "engineConfig": {
+        "mode": "free-set",
+        "anchor": null,
+        "words": [],
+        "minWords": 5,
+        "maxWords": 8,
+        "metric": "both",
+        "disagreementRounds": 3,
+        "allowUserWords": true
+      },
+      "passCriteria": {
+        "metric": "metricDisagreementAccuracy",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 60
+    }
+  ]
+}

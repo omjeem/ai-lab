@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "id": "5-3-multi-head-attention",
+  "world": 5,
+  "worldTitle": "The Transformer",
+  "chapterTitle": "Multi-Head Attention",
+  "order": 3,
+  "concept": {
+    "shortExplanation": "One attention pattern per layer would force every relationship a sentence contains through a single set of weights. Instead the layer splits its dimensions into several heads, each with its own query, key and value projections, each computing an independent pattern, and concatenates the results. Nothing assigns roles to heads — but train the model and heads reliably specialise anyway, some tracking position, some syntax, some parking on delimiters. You are about to extract all of them from a real model and measure what each one does.",
+    "ahaMoment": "Head specialisation was never designed. It is what happens when you give a model several parallel channels and a loss that rewards using them for different things."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "Xenova/distilbert-base-uncased",
+    "estimatedSizeMB": 67,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The transformer could not be downloaded, so per-head attention cannot be extracted. Check your connection and retry — cached models work offline."
+  },
+  "xpReward": 170,
+  "unlockRequires": ["5-2-self-attention"],
+  "levels": [
+    {
+      "id": "5-3-l1",
+      "title": "Spot the Specialist",
+      "difficulty": "easy",
+      "instructions": "All twelve heads of this layer, side by side, computed live. Find the head that attends almost entirely to the previous token — its behaviour is measured directly from its real attention matrix.",
+      "engineType": "multiHeadDetective",
+      "engineConfig": {
+        "mode": "find-behaviour",
+        "sentence": "the quiet librarian returned the overdue book yesterday morning",
+        "layer": 3,
+        "layerRange": [0, 5],
+        "headCount": 12,
+        "targetBehaviour": "previous-token",
+        "behaviours": ["previous-token", "next-token", "self", "delimiter", "diffuse"],
+        "excludeSpecialTokens": false,
+        "rounds": 3
+      },
+      "passCriteria": {
+        "metric": "headMatchAccuracy",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.99, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "5-3-l2",
+      "title": "Classify Every Head",
+      "difficulty": "medium",
+      "instructions": "Assign a behaviour label to each head in the layer. Ground truth comes from statistics computed over each head's real attention matrix — offset concentration, entropy and delimiter mass.",
+      "engineType": "multiHeadDetective",
+      "engineConfig": {
+        "mode": "classify-all",
+        "sentence": "after the meeting ended, the team walked to the cafe across the street",
+        "layer": 2,
+        "layerRange": [0, 5],
+        "headCount": 12,
+        "behaviours": ["previous-token", "next-token", "self", "delimiter", "diffuse"],
+        "excludeSpecialTokens": false,
+        "confidenceMargin": 0.12
+      },
+      "passCriteria": {
+        "metric": "headClassificationAccuracy",
+        "threshold": 0.55,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.55, "stars": 1 },
+        { "threshold": 0.72, "stars": 2 },
+        { "threshold": 0.85, "stars": 3 }
+      ],
+      "xpReward": 55
+    },
+    {
+      "id": "5-3-l3",
+      "title": "Which Head Solves It?",
+      "difficulty": "hard",
+      "instructions": "Your own sentence, containing a long-range dependency. Find the single head anywhere in the model that most strongly links the two tokens you care about, and see how localised that capability really is.",
+      "engineType": "multiHeadDetective",
+      "engineConfig": {
+        "mode": "hunt-dependency",
+        "sentence": "the keys that the neighbour returned last week are still on the table",
+        "layer": 0,
+        "layerRange": [0, 5],
+        "headCount": 12,
+        "searchAllLayers": true,
+        "behaviours": ["previous-token", "next-token", "self", "delimiter", "diffuse"],
+        "excludeSpecialTokens": true,
+        "attempts": 5,
+        "allowUserSentence": true
+      },
+      "passCriteria": {
+        "metric": "dependencyHuntScore",
+        "threshold": 0.55,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.55, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 0.9, "stars": 3 }
+      ],
+      "xpReward": 70
+    }
+  ]
+}

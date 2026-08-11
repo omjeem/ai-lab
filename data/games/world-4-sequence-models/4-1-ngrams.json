@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "4-1-ngrams",
+  "world": 4,
+  "worldTitle": "Sequence Models",
+  "chapterTitle": "N-grams",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "The first working language models were counting exercises. Read a corpus, tally how often each word follows each context of length n minus one, normalise, and you have a next-word distribution. Raising n makes predictions sharper and the counts sparser, until almost every context you meet at test time was never seen during counting. The tables in this chapter are built in your browser from a bundled public-domain corpus at load time — change the corpus and the model changes with it.",
+    "ahaMoment": "A bigram table has no notion of grammar, topic or meaning, and it still produces text that reads as almost-English. Most of what looks like understanding in a language model is available from local statistics alone — which is exactly why the remaining part is the hard part."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "local:ngram-corpus",
+    "estimatedSizeMB": 2,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The bundled corpus could not be loaded, so the n-gram tables cannot be built. Reload the chapter to retry."
+  },
+  "xpReward": 130,
+  "unlockRequires": ["3-4-training-dynamics"],
+  "levels": [
+    {
+      "id": "4-1-l1",
+      "title": "Beat the Bigram",
+      "difficulty": "easy",
+      "instructions": "Given a context, pick the next word. You are competing against a bigram table built live from the corpus — score a point whenever your pick matches the actual next word in held-out text.",
+      "engineType": "ngramPrediction",
+      "engineConfig": {
+        "mode": "beat-the-model",
+        "corpus": "austen-sample",
+        "n": 2,
+        "rounds": 8,
+        "candidateCount": 4,
+        "smoothing": "laplace",
+        "smoothingAlpha": 0.1
+      },
+      "passCriteria": {
+        "metric": "predictionAccuracy",
+        "threshold": 0.375,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.375, "stars": 1 },
+        { "threshold": 0.6, "stars": 2 },
+        { "threshold": 0.8, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "4-1-l2",
+      "title": "Choose Your N",
+      "difficulty": "medium",
+      "instructions": "Build tables at several orders and find the n that minimises perplexity on held-out text. Both the tables and the perplexity are computed in-browser from the corpus.",
+      "engineType": "ngramPrediction",
+      "engineConfig": {
+        "mode": "tune-order",
+        "corpus": "austen-sample",
+        "n": 1,
+        "nRange": [1, 5],
+        "smoothing": "laplace",
+        "smoothingAlpha": 0.1,
+        "smoothingAlphaRange": [0.001, 1],
+        "heldOutSplit": 0.2
+      },
+      "passCriteria": {
+        "metric": "heldOutPerplexity",
+        "threshold": 220,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 220, "stars": 1 },
+        { "threshold": 170, "stars": 2 },
+        { "threshold": 140, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "4-1-l3",
+      "title": "The Sparsity Wall",
+      "difficulty": "hard",
+      "instructions": "Push the order up until most test contexts have never been seen. Find the highest n whose coverage of held-out contexts stays above the threshold, and see why counting alone cannot scale.",
+      "engineType": "ngramPrediction",
+      "engineConfig": {
+        "mode": "sparsity-wall",
+        "corpus": "austen-sample",
+        "n": 3,
+        "nRange": [2, 7],
+        "smoothing": "laplace",
+        "smoothingAlpha": 0.05,
+        "smoothingAlphaRange": [0.001, 1],
+        "heldOutSplit": 0.2,
+        "minCoverage": 0.5
+      },
+      "passCriteria": {
+        "metric": "sparsityScore",
+        "threshold": 0.55,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.55, "stars": 1 },
+        { "threshold": 0.7, "stars": 2 },
+        { "threshold": 0.85, "stars": 3 }
+      ],
+      "xpReward": 50
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "id": "5-1-positional-encoding",
+  "world": 5,
+  "worldTitle": "The Transformer",
+  "chapterTitle": "Positional Encoding",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "Attention looks at every token simultaneously, which means that on its own it cannot tell 'dog bites man' from 'man bites dog'. Position has to be added to the input explicitly. The sinusoidal scheme gives every position a signature built from sine and cosine waves at geometrically spaced frequencies, so nearby positions are similar, distant ones are not, and the pattern extends to lengths never seen in training. The waves are pure mathematics; the token vectors they are added to are real embeddings.",
+    "ahaMoment": "Position is not a number the model looks up — it is a pattern mixed into the meaning vector itself. The same word at two positions is genuinely two different vectors by the time attention sees it."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "Xenova/all-MiniLM-L6-v2",
+    "estimatedSizeMB": 23,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The embedding model could not be downloaded, so encodings cannot be combined with real token vectors. Retry once you have a connection — it works offline afterwards."
+  },
+  "xpReward": 130,
+  "unlockRequires": ["4-3-sampling-strategies"],
+  "levels": [
+    {
+      "id": "5-1-l1",
+      "title": "Read the Signature",
+      "difficulty": "easy",
+      "instructions": "Each encoding stripe belongs to one position. Identify which. The values are computed from the sinusoidal formula at the dimensions shown.",
+      "engineType": "positionalEncoding",
+      "engineConfig": {
+        "mode": "identify-position",
+        "dModel": 64,
+        "maxPosition": 32,
+        "base": 10000,
+        "rounds": 6,
+        "candidateCount": 4,
+        "seed": 3
+      },
+      "passCriteria": {
+        "metric": "positionIdentificationAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 0.95, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "5-1-l2",
+      "title": "Keep Positions Distinct",
+      "difficulty": "medium",
+      "instructions": "Set the model dimension and frequency base so that every position in the sequence stays distinguishable from every other. Distinctness is measured as the worst-case similarity between any two position vectors.",
+      "engineType": "positionalEncoding",
+      "engineConfig": {
+        "mode": "tune-distinctness",
+        "dModel": 8,
+        "dModelOptions": [4, 8, 16, 32, 64, 128],
+        "maxPosition": 64,
+        "base": 100,
+        "baseRange": [10, 100000],
+        "seed": 3
+      },
+      "passCriteria": {
+        "metric": "encodingDistinctness",
+        "threshold": 0.55,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.55, "stars": 1 },
+        { "threshold": 0.72, "stars": 2 },
+        { "threshold": 0.85, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "5-1-l3",
+      "title": "Word Plus Position",
+      "difficulty": "hard",
+      "instructions": "Real token embeddings, real encodings, added together as the transformer does it. Given two sentences that differ only in word order, predict how much the combined vectors diverge — then check against the measured value.",
+      "engineType": "positionalEncoding",
+      "engineConfig": {
+        "mode": "combine-with-embeddings",
+        "dModel": 384,
+        "maxPosition": 32,
+        "base": 10000,
+        "sentencePairs": [
+          ["the dog bit the man", "the man bit the dog"],
+          ["only she told him that", "she told only him that"],
+          ["rain before sunset", "sunset before rain"]
+        ],
+        "scale": 1,
+        "scaleRange": [0, 2],
+        "rounds": 3
+      },
+      "passCriteria": {
+        "metric": "divergenceEstimateError",
+        "threshold": 0.18,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.18, "stars": 1 },
+        { "threshold": 0.11, "stars": 2 },
+        { "threshold": 0.055, "stars": 3 }
+      ],
+      "xpReward": 50
+    }
+  ]
+}

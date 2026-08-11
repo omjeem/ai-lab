@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "1-1-vectors",
+  "world": 1,
+  "worldTitle": "Fundamentals",
+  "chapterTitle": "What is a Vector?",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "A model does not read words. It reads lists of numbers. Every word you type is converted into a fixed-length list — a vector — with a few hundred coordinates, and that list is the only thing the model ever sees. Words that get used in similar ways end up with similar coordinates, which is why the geometry of that space carries meaning. You are about to look at that space directly, projected down from 384 dimensions to the 2 your screen can show.",
+    "ahaMoment": "Nothing told the model that 'hamster' and 'gerbil' are related. It never saw a category label. Those two vectors landed near each other purely because the text it trained on used the two words in the same slots — meaning fell out of position, and position fell out of usage."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "Xenova/all-MiniLM-L6-v2",
+    "estimatedSizeMB": 23,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The embedding model could not be downloaded. Check your connection and retry — once it is cached, this chapter runs fully offline."
+  },
+  "xpReward": 120,
+  "unlockRequires": [],
+  "levels": [
+    {
+      "id": "1-1-l1",
+      "title": "Place and Cluster",
+      "difficulty": "easy",
+      "instructions": "Each word below is embedded live by the model. Drag every word onto the canvas so that words the model considers related sit near each other. Your layout is scored against the real structure of the embedding space — not against a stored answer key.",
+      "engineType": "clusterPlacement",
+      "engineConfig": {
+        "mode": "place-and-cluster",
+        "words": ["cat", "dog", "hamster", "truck", "bus", "bicycle"],
+        "clusterCount": 2,
+        "canvas": { "width": 100, "height": 100 },
+        "allowUserWords": false
+      },
+      "passCriteria": {
+        "metric": "clusterSeparationScore",
+        "threshold": 0.55,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.55, "stars": 1 },
+        { "threshold": 0.72, "stars": 2 },
+        { "threshold": 0.88, "stars": 3 }
+      ],
+      "xpReward": 30
+    },
+    {
+      "id": "1-1-l2",
+      "title": "Guess the Label",
+      "difficulty": "medium",
+      "instructions": "The points are now at their real projected positions. The model grouped them without ever being told what the groups mean. Assign each candidate label to the cluster it belongs to — ground truth is decided by embedding the labels themselves and seeing which cluster each one lands nearest to.",
+      "engineType": "clusterPlacement",
+      "engineConfig": {
+        "mode": "guess-the-label",
+        "words": [
+          "violin",
+          "trumpet",
+          "cello",
+          "hydrogen",
+          "oxygen",
+          "nitrogen",
+          "lasagna",
+          "risotto",
+          "paella"
+        ],
+        "labels": ["instruments", "elements", "food"],
+        "clusterCount": 3,
+        "canvas": { "width": 100, "height": 100 },
+        "allowUserWords": false
+      },
+      "passCriteria": {
+        "metric": "labelAccuracy",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.99, "stars": 3 }
+      ],
+      "xpReward": 40
+    },
+    {
+      "id": "1-1-l3",
+      "title": "Magnitude",
+      "difficulty": "hard",
+      "instructions": "Direction carries meaning, but a vector also has a length. Type any word you like, then set the slider to your estimate of its real embedding magnitude before revealing it. Accuracy is measured against the actual L2 norm the model produces.",
+      "engineType": "clusterPlacement",
+      "engineConfig": {
+        "mode": "drag-vector-magnitude",
+        "words": ["ocean", "the", "quantum"],
+        "clusterCount": 1,
+        "canvas": { "width": 100, "height": 100 },
+        "allowUserWords": true,
+        "magnitudeTolerance": 0.35,
+        "rounds": 3
+      },
+      "passCriteria": {
+        "metric": "magnitudeAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.7, "stars": 2 },
+        { "threshold": 0.85, "stars": 3 }
+      ],
+      "xpReward": 50
+    }
+  ]
+}

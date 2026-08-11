@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "id": "6-1-inspector-chat",
+  "world": 6,
+  "worldTitle": "Capstone",
+  "chapterTitle": "Inspector Chat",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "Everything you have taken apart now runs at once, in a real instruct-tuned model loaded into your browser. This is not a chat toy — the conversation is the instrument panel, and every response comes with the internals you have spent five worlds learning to read: the tokenisation, the next-token distribution at each step, the sampling cut, the entropy. Your job is to make the model do specific things and prove it by pointing at the numbers.",
+    "ahaMoment": "You can now look at any model output and say what mechanism produced it — which tokens the sampler was choosing between, how confident the distribution was, and where the answer stopped being determined by the prompt and started being determined by temperature."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "Llama-3.2-1B-Instruct-q4f16_1-MLC",
+    "estimatedSizeMB": 880,
+    "fallbackMessage": "This is a much larger model that runs in the cloud — connect to the internet to use it. Your local model above works fully offline.",
+    "loadFailureMessage": "The local model could not be loaded. It is roughly 880MB and needs WebGPU — check your browser support, storage and connection, then retry. Everything from Worlds 1 to 5 still works without it."
+  },
+  "xpReward": 260,
+  "unlockRequires": ["5-5-full-transformer"],
+  "levels": [
+    {
+      "id": "6-1-l1",
+      "title": "Drive the Distribution",
+      "difficulty": "easy",
+      "instructions": "Complete each challenge by writing prompts and setting sampling parameters. Every challenge is verified against the real inference trace — token counts, probabilities and entropy read from the running model.",
+      "engineType": "inspectorChat",
+      "engineConfig": {
+        "mode": "challenge-run",
+        "maxTokens": 96,
+        "temperature": 0.7,
+        "temperatureRange": [0.1, 2],
+        "topP": 0.95,
+        "topPRange": [0.1, 1],
+        "challenges": [
+          {
+            "id": "c1",
+            "prompt": "Make the model produce a response whose first token has probability above 0.9.",
+            "check": "firstTokenProbability",
+            "comparator": "gte",
+            "target": 0.9
+          },
+          {
+            "id": "c2",
+            "prompt": "Make the model produce a response whose mean per-token entropy exceeds 3 bits.",
+            "check": "meanEntropyBits",
+            "comparator": "gte",
+            "target": 3
+          },
+          {
+            "id": "c3",
+            "prompt": "Get a complete answer in under 20 generated tokens.",
+            "check": "generatedTokenCount",
+            "comparator": "lte",
+            "target": 20
+          }
+        ]
+      },
+      "passCriteria": {
+        "metric": "challengesCompleted",
+        "threshold": 2,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 2, "stars": 2 },
+        { "threshold": 3, "stars": 3 }
+      ],
+      "xpReward": 70
+    },
+    {
+      "id": "6-1-l2",
+      "title": "Find the Fork",
+      "difficulty": "medium",
+      "instructions": "Generate a response, then identify the single position where the model was least certain — the fork where sampling, not the prompt, decided the answer. Verified against the real per-step distributions.",
+      "engineType": "inspectorChat",
+      "engineConfig": {
+        "mode": "find-fork",
+        "maxTokens": 128,
+        "temperature": 0.9,
+        "temperatureRange": [0.1, 2],
+        "topP": 0.95,
+        "topPRange": [0.1, 1],
+        "rounds": 3,
+        "positionTolerance": 2
+      },
+      "passCriteria": {
+        "metric": "forkIdentificationAccuracy",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.99, "stars": 3 }
+      ],
+      "xpReward": 80
+    },
+    {
+      "id": "6-1-l3",
+      "title": "Local versus Cloud",
+      "difficulty": "hard",
+      "instructions": "Same prompt, two models — the 1B running on your machine and a much larger one in the cloud. Predict where they will diverge and which differences come from scale rather than sampling. The cloud toggle needs a connection; the local model does not.",
+      "engineType": "inspectorChat",
+      "engineConfig": {
+        "mode": "compare-scale",
+        "maxTokens": 160,
+        "temperature": 0.7,
+        "temperatureRange": [0.1, 2],
+        "topP": 0.95,
+        "topPRange": [0.1, 1],
+        "cloudEscalation": true,
+        "cloudRequiresOnline": true,
+        "rounds": 3,
+        "comparisonAxes": ["factuality", "verbosity", "instructionFollowing", "refusalBehaviour"]
+      },
+      "passCriteria": {
+        "metric": "comparisonScore",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.78, "stars": 2 },
+        { "threshold": 0.92, "stars": 3 }
+      ],
+      "xpReward": 110
+    }
+  ]
+}

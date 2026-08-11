@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "5-2-self-attention",
+  "world": 5,
+  "worldTitle": "The Transformer",
+  "chapterTitle": "Self-Attention",
+  "order": 2,
+  "concept": {
+    "shortExplanation": "Every token produces three vectors: a query describing what it is looking for, a key advertising what it offers, and a value carrying what it will contribute. Compare one token's query against every key, scale, softmax, and you get a set of weights that sum to one — a statement of where this token should look. The output is the weighted mixture of values. That is the whole mechanism, and it removed the fixed-size bottleneck you watched fail in World 4 by letting every position reach every other directly. Every weight in this chapter is extracted from a real transformer running in your browser.",
+    "ahaMoment": "Nobody wrote a rule connecting the pronoun to its antecedent. That link is a large number in an attention matrix, and it got large because predicting text was easier when it was."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "Xenova/distilbert-base-uncased",
+    "estimatedSizeMB": 67,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The transformer could not be downloaded, so no real attention weights can be extracted. This chapter needs the model — check your connection and retry. It runs offline once cached."
+  },
+  "xpReward": 200,
+  "unlockRequires": ["5-1-positional-encoding"],
+  "levels": [
+    {
+      "id": "5-2-l1",
+      "title": "Where Does It Look?",
+      "difficulty": "easy",
+      "instructions": "Pick the token that receives the most attention from the highlighted query token. Your answer is checked against the real attention row, averaged across heads in the selected layer.",
+      "engineType": "attentionGuess",
+      "engineConfig": {
+        "mode": "guess-argmax",
+        "sentences": [
+          "the cat sat on the mat because it was warm",
+          "the trophy did not fit in the suitcase because it was too large",
+          "sarah handed the book to mark after she finished it"
+        ],
+        "layer": 4,
+        "layerRange": [0, 5],
+        "headAggregation": "mean",
+        "excludeSpecialTokens": true,
+        "rounds": 3
+      },
+      "passCriteria": {
+        "metric": "attentionGuessAccuracy",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.99, "stars": 3 }
+      ],
+      "xpReward": 50
+    },
+    {
+      "id": "5-2-l2",
+      "title": "Draw the Row",
+      "difficulty": "medium",
+      "instructions": "Allocate one hundred units of attention across the tokens as you think the model does. Scored on the distance between your distribution and the model's real one, so a confident wrong guess costs more than an honest spread.",
+      "engineType": "attentionGuess",
+      "engineConfig": {
+        "mode": "draw-distribution",
+        "sentences": [
+          "the doctor called the nurse because she was late",
+          "we poured water into the glass until it was full"
+        ],
+        "layer": 4,
+        "layerRange": [0, 5],
+        "headAggregation": "mean",
+        "excludeSpecialTokens": true,
+        "budget": 100,
+        "rounds": 2,
+        "allowUserSentence": true
+      },
+      "passCriteria": {
+        "metric": "attentionDistributionError",
+        "threshold": 0.3,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.3, "stars": 1 },
+        { "threshold": 0.2, "stars": 2 },
+        { "threshold": 0.12, "stars": 3 }
+      ],
+      "xpReward": 65
+    },
+    {
+      "id": "5-2-l3",
+      "title": "Break the Reference",
+      "difficulty": "hard",
+      "instructions": "Write your own sentence containing an ambiguous pronoun, then find a minimal edit that flips which noun the model attends to most. Both attention matrices are computed live from your text.",
+      "engineType": "attentionGuess",
+      "engineConfig": {
+        "mode": "flip-reference",
+        "sentences": ["the trophy did not fit in the suitcase because it was too large"],
+        "layer": 4,
+        "layerRange": [0, 5],
+        "headAggregation": "mean",
+        "excludeSpecialTokens": true,
+        "maxEditDistance": 12,
+        "attempts": 6,
+        "minFlipMargin": 0.05,
+        "allowUserSentence": true
+      },
+      "passCriteria": {
+        "metric": "referenceFlipScore",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.72, "stars": 2 },
+        { "threshold": 0.88, "stars": 3 }
+      ],
+      "xpReward": 85
+    }
+  ]
+}

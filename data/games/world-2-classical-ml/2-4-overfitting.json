@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "2-4-overfitting",
+  "world": 2,
+  "worldTitle": "Classical ML",
+  "chapterTitle": "Overfitting & Regularization",
+  "order": 4,
+  "concept": {
+    "shortExplanation": "A model with enough capacity can drive its training error to zero by memorising the noise, and that is the failure mode that looks most like success. The only honest signal is performance on data the fit never saw. Regularisation works by making large weights expensive, so the fit has to justify complexity with real signal. The polynomial fits here are solved by real least squares with a ridge penalty, recomputed every time you move a control.",
+    "ahaMoment": "Training loss went down the whole time. It went down while the model got worse. Any metric computed on the data you fitted is incapable of telling you when to stop."
+  },
+  "modelRequirement": {
+    "tier": "none",
+    "modelId": null,
+    "estimatedSizeMB": null,
+    "fallbackMessage": null,
+    "loadFailureMessage": null
+  },
+  "xpReward": 120,
+  "unlockRequires": ["2-3-gradient-descent"],
+  "levels": [
+    {
+      "id": "2-4-l1",
+      "title": "Pick the Degree",
+      "difficulty": "easy",
+      "instructions": "Raise the polynomial degree and watch training loss fall while validation loss turns around. Stop at the degree that generalises best.",
+      "engineType": "overfitFit",
+      "engineConfig": {
+        "trueFunction": "cubic",
+        "sampleCount": 20,
+        "noiseSigma": 0.25,
+        "seed": 5,
+        "trainSplit": 0.6,
+        "degree": 1,
+        "degreeRange": [1, 12],
+        "lambda": 0,
+        "lambdaRange": [0, 1]
+      },
+      "passCriteria": {
+        "metric": "validationLoss",
+        "threshold": 0.14,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.14, "stars": 1 },
+        { "threshold": 0.1, "stars": 2 },
+        { "threshold": 0.08, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "2-4-l2",
+      "title": "Tame Degree Twelve",
+      "difficulty": "medium",
+      "instructions": "The degree is locked at twelve — far more capacity than this data deserves. Use the ridge penalty alone to bring validation loss back down without touching the degree.",
+      "engineType": "overfitFit",
+      "engineConfig": {
+        "trueFunction": "cubic",
+        "sampleCount": 20,
+        "noiseSigma": 0.25,
+        "seed": 5,
+        "trainSplit": 0.6,
+        "degree": 12,
+        "degreeLocked": true,
+        "lambda": 0,
+        "lambdaRange": [0, 2]
+      },
+      "passCriteria": {
+        "metric": "validationLoss",
+        "threshold": 0.16,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.16, "stars": 1 },
+        { "threshold": 0.11, "stars": 2 },
+        { "threshold": 0.085, "stars": 3 }
+      ],
+      "xpReward": 40
+    },
+    {
+      "id": "2-4-l3",
+      "title": "Close the Gap",
+      "difficulty": "hard",
+      "instructions": "Noisier data, fewer samples. Tune both degree and penalty to minimise the gap between training and validation loss while keeping the fit useful.",
+      "engineType": "overfitFit",
+      "engineConfig": {
+        "trueFunction": "sine",
+        "sampleCount": 14,
+        "noiseSigma": 0.35,
+        "seed": 23,
+        "trainSplit": 0.5,
+        "degree": 3,
+        "degreeRange": [1, 14],
+        "lambda": 0,
+        "lambdaRange": [0, 3]
+      },
+      "passCriteria": {
+        "metric": "generalizationGap",
+        "threshold": 0.2,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.2, "stars": 1 },
+        { "threshold": 0.12, "stars": 2 },
+        { "threshold": 0.06, "stars": 3 }
+      ],
+      "xpReward": 45
+    }
+  ]
+}

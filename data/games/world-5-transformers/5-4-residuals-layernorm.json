@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "id": "5-4-residuals-layernorm",
+  "world": 5,
+  "worldTitle": "The Transformer",
+  "chapterTitle": "Residuals & Layer Norm",
+  "order": 4,
+  "concept": {
+    "shortExplanation": "Attention and feed-forward blocks are not the only reason transformers work — the plumbing around them is doing real load-bearing work. A residual connection adds each block's input back to its output, so the block only has to learn a correction and gradients get an unobstructed path back to earlier layers. Layer normalisation rescales each token's activations to a consistent statistic, which stops the values drifting as depth accumulates. Remove either one and deep stacks stop training. The activation traces here are real hidden states pulled from every layer of a live model.",
+    "ahaMoment": "Depth was never blocked by a lack of ideas about what layers should compute. It was blocked by numbers drifting and gradients dying, and two pieces of plumbing fixed both."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "Xenova/distilbert-base-uncased",
+    "estimatedSizeMB": 67,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The transformer could not be downloaded, so per-layer hidden states cannot be read. Check your connection and retry — it works offline once cached."
+  },
+  "xpReward": 160,
+  "unlockRequires": ["5-3-multi-head-attention"],
+  "levels": [
+    {
+      "id": "5-4-l1",
+      "title": "Trace the Norms",
+      "difficulty": "easy",
+      "instructions": "Real hidden-state magnitudes, layer by layer, extracted from the model. Predict how the activation norm evolves with depth before revealing the measured trace.",
+      "engineType": "residualToggle",
+      "engineConfig": {
+        "mode": "predict-trace",
+        "sentence": "the engineer reviewed the schematic before signing off on the design",
+        "layerCount": 7,
+        "residual": true,
+        "layerNorm": true,
+        "rounds": 3,
+        "traceMetric": "l2norm"
+      },
+      "passCriteria": {
+        "metric": "traceEstimateError",
+        "threshold": 0.25,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.25, "stars": 1 },
+        { "threshold": 0.15, "stars": 2 },
+        { "threshold": 0.08, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "5-4-l2",
+      "title": "Pull the Plumbing",
+      "difficulty": "medium",
+      "instructions": "Toggle the residual path and layer norm off and recompute the stack from the model's real per-layer states. Find the configuration where activations stay in a stable band across all layers.",
+      "engineType": "residualToggle",
+      "engineConfig": {
+        "mode": "toggle-stability",
+        "sentence": "the engineer reviewed the schematic before signing off on the design",
+        "layerCount": 7,
+        "residual": false,
+        "layerNorm": false,
+        "stableBand": [0.5, 2],
+        "traceMetric": "l2norm"
+      },
+      "passCriteria": {
+        "metric": "stabilityScore",
+        "threshold": 0.7,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.7, "stars": 1 },
+        { "threshold": 0.85, "stars": 2 },
+        { "threshold": 0.95, "stars": 3 }
+      ],
+      "xpReward": 50
+    },
+    {
+      "id": "5-4-l3",
+      "title": "Minimise the Drift",
+      "difficulty": "hard",
+      "instructions": "Deeper stack, your own sentence. Tune the residual scale and normalisation epsilon to keep drift between consecutive layers as low as possible without flattening the representation entirely.",
+      "engineType": "residualToggle",
+      "engineConfig": {
+        "mode": "minimise-drift",
+        "sentence": "the engineer reviewed the schematic before signing off on the design",
+        "layerCount": 7,
+        "residual": true,
+        "layerNorm": true,
+        "residualScale": 1,
+        "residualScaleRange": [0, 2],
+        "normEpsilon": 0.00001,
+        "normEpsilonRange": [0.0000001, 0.1],
+        "minRepresentationVariance": 0.05,
+        "traceMetric": "l2norm",
+        "allowUserSentence": true
+      },
+      "passCriteria": {
+        "metric": "activationDrift",
+        "threshold": 0.3,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.3, "stars": 1 },
+        { "threshold": 0.18, "stars": 2 },
+        { "threshold": 0.1, "stars": 3 }
+      ],
+      "xpReward": 65
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "id": "2-2-loss-functions",
+  "world": 2,
+  "worldTitle": "Classical ML",
+  "chapterTitle": "Loss Functions",
+  "order": 2,
+  "concept": {
+    "shortExplanation": "A loss function is the only place where you get to say what 'wrong' means. Everything else in training is mechanical: the optimiser will minimise whatever number you hand it, faithfully and without judgement. Squared error punishes big misses disproportionately, absolute error does not, and cross-entropy punishes confident wrong answers far more harshly than hesitant ones. Choosing badly here produces a model that succeeds at the wrong task.",
+    "ahaMoment": "Outlier sensitivity was never a property of your model — it was a property of the loss you picked. Swapping squared error for absolute error changes the answer without changing a single thing about the architecture."
+  },
+  "modelRequirement": {
+    "tier": "none",
+    "modelId": null,
+    "estimatedSizeMB": null,
+    "fallbackMessage": null,
+    "loadFailureMessage": null
+  },
+  "xpReward": 110,
+  "unlockRequires": ["2-1-perceptron"],
+  "levels": [
+    {
+      "id": "2-2-l1",
+      "title": "Minimise by Hand",
+      "difficulty": "easy",
+      "instructions": "Move the prediction line to minimise mean squared error against the data points. The loss readout is computed live from your current position.",
+      "engineType": "lossMinimization",
+      "engineConfig": {
+        "mode": "minimize",
+        "lossType": "mse",
+        "points": [
+          [0, 1.1],
+          [1, 2.9],
+          [2, 5.2],
+          [3, 6.8],
+          [4, 9.1]
+        ],
+        "initialSlope": 0,
+        "initialIntercept": 0,
+        "slopeRange": [-3, 6],
+        "interceptRange": [-5, 5]
+      },
+      "passCriteria": {
+        "metric": "lossValue",
+        "threshold": 0.6,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.25, "stars": 2 },
+        { "threshold": 0.1, "stars": 3 }
+      ],
+      "xpReward": 30
+    },
+    {
+      "id": "2-2-l2",
+      "title": "The Outlier",
+      "difficulty": "medium",
+      "instructions": "One point is a clear outlier. Fit the same line under squared error and under absolute error, and see which one the outlier drags. Match the target fit under absolute error.",
+      "engineType": "lossMinimization",
+      "engineConfig": {
+        "mode": "minimize",
+        "lossType": "mae",
+        "compareWith": "mse",
+        "points": [
+          [0, 1],
+          [1, 2],
+          [2, 3],
+          [3, 4],
+          [4, 15]
+        ],
+        "initialSlope": 3,
+        "initialIntercept": 0,
+        "slopeRange": [-2, 6],
+        "interceptRange": [-5, 5]
+      },
+      "passCriteria": {
+        "metric": "lossValue",
+        "threshold": 2.4,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 2.4, "stars": 1 },
+        { "threshold": 2.1, "stars": 2 },
+        { "threshold": 1.9, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "2-2-l3",
+      "title": "Pick the Right Loss",
+      "difficulty": "hard",
+      "instructions": "Each scenario describes a real task. Choose the loss function that encodes what actually matters in that setting.",
+      "engineType": "lossMinimization",
+      "engineConfig": {
+        "mode": "match-loss",
+        "options": ["mse", "mae", "crossEntropy", "hinge"],
+        "scenarios": [
+          {
+            "id": "s1",
+            "prompt": "Predicting house prices where a handful of mansions skew the dataset badly.",
+            "answer": "mae"
+          },
+          {
+            "id": "s2",
+            "prompt": "Classifying whether an email is spam, and you need calibrated probabilities out.",
+            "answer": "crossEntropy"
+          },
+          {
+            "id": "s3",
+            "prompt": "A margin-based classifier where you only care about examples near the boundary.",
+            "answer": "hinge"
+          },
+          {
+            "id": "s4",
+            "prompt": "Forecasting temperature, where every error matters in proportion to its square.",
+            "answer": "mse"
+          }
+        ]
+      },
+      "passCriteria": {
+        "metric": "lossChoiceAccuracy",
+        "threshold": 0.75,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.75, "stars": 1 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 45
+    }
+  ]
+}

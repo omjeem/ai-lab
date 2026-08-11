@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "3-1-neurons-activations",
+  "world": 3,
+  "worldTitle": "Neural Networks",
+  "chapterTitle": "Neurons & Activations",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "A neuron is a weighted sum followed by one non-linear function. That is all. The weighted sum can only draw straight lines; the non-linearity is what lets stacks of them bend. ReLU passes positives through and flattens negatives, which sounds too crude to matter and turns out to be the reason deep networks train at all. Change the activation and the same weights produce a completely different shape.",
+    "ahaMoment": "Remove the activation function and a hundred stacked layers collapse algebraically into a single linear one. The entire depth of a deep network is only worth something because of that one bend per layer."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "local:single-neuron",
+    "estimatedSizeMB": 0,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The in-browser neuron failed to initialise. Reload the chapter to retry — nothing is downloaded, the unit is computed locally."
+  },
+  "xpReward": 130,
+  "unlockRequires": ["2-4-overfitting"],
+  "levels": [
+    {
+      "id": "3-1-l1",
+      "title": "Tune the Weights",
+      "difficulty": "easy",
+      "instructions": "Set the two weights and the bias so the neuron's output matches the target curve. Every output value is the real forward computation of your current parameters.",
+      "engineType": "neuronTuning",
+      "engineConfig": {
+        "mode": "match-output",
+        "activation": "relu",
+        "inputCount": 2,
+        "weights": [0, 0],
+        "bias": 0,
+        "weightRange": [-3, 3],
+        "biasRange": [-3, 3],
+        "targetWeights": [1.5, -0.8],
+        "targetBias": 0.4,
+        "probePoints": 24,
+        "seed": 3
+      },
+      "passCriteria": {
+        "metric": "outputMatchScore",
+        "threshold": 0.85,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.85, "stars": 1 },
+        { "threshold": 0.93, "stars": 2 },
+        { "threshold": 0.98, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "3-1-l2",
+      "title": "Match the Activation",
+      "difficulty": "medium",
+      "instructions": "Each output trace was produced by one activation function. Identify which — the traces are generated live by running the same weights through each candidate.",
+      "engineType": "neuronTuning",
+      "engineConfig": {
+        "mode": "identify-activation",
+        "activation": "relu",
+        "candidates": ["relu", "sigmoid", "tanh", "leakyRelu", "gelu"],
+        "inputCount": 1,
+        "weights": [1.2],
+        "bias": -0.3,
+        "weightRange": [-3, 3],
+        "biasRange": [-3, 3],
+        "rounds": 5,
+        "probePoints": 40,
+        "seed": 17
+      },
+      "passCriteria": {
+        "metric": "activationIdentificationAccuracy",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "3-1-l3",
+      "title": "The Dead Neuron",
+      "difficulty": "hard",
+      "instructions": "This ReLU neuron outputs zero for every input in the dataset and receives no gradient as a result. Diagnose it and bring it back to life without changing the activation.",
+      "engineType": "neuronTuning",
+      "engineConfig": {
+        "mode": "revive-dead-neuron",
+        "activation": "relu",
+        "inputCount": 2,
+        "weights": [-2.4, -1.9],
+        "bias": -2.2,
+        "weightRange": [-3, 3],
+        "biasRange": [-3, 3],
+        "probePoints": 32,
+        "minActiveFraction": 0.35,
+        "seed": 9
+      },
+      "passCriteria": {
+        "metric": "activeFraction",
+        "threshold": 0.35,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.35, "stars": 1 },
+        { "threshold": 0.5, "stars": 2 },
+        { "threshold": 0.62, "stars": 3 }
+      ],
+      "xpReward": 50
+    }
+  ]
+}

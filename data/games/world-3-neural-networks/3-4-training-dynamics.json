@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "id": "3-4-training-dynamics",
+  "world": 3,
+  "worldTitle": "Neural Networks",
+  "chapterTitle": "Training Dynamics",
+  "order": 4,
+  "concept": {
+    "shortExplanation": "Everything that decides whether training works sits outside the model: learning rate, batch size, initialisation, how long you run. Small batches give noisy gradients that sometimes help you escape bad regions and sometimes stop you settling anywhere. Large learning rates cover ground until they diverge. There is no setting that is correct in general, only settings that are correct for a budget — and you are about to spend one.",
+    "ahaMoment": "The loss curve tells you what happened, not why. Two runs with identical final loss can have taken completely different routes, and only one of them would have survived a slightly harder dataset."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "local:tiny-net",
+    "estimatedSizeMB": 0,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The in-browser trainer failed to start, so no training run can be measured. Reload the chapter to retry."
+  },
+  "xpReward": 150,
+  "unlockRequires": ["3-3-backpropagation"],
+  "levels": [
+    {
+      "id": "3-4-l1",
+      "title": "Read the Curve",
+      "difficulty": "easy",
+      "instructions": "Four real training runs, four different learning rates. Match each loss curve to the rate that produced it. The runs are executed live before you answer.",
+      "engineType": "trainingDashboard",
+      "engineConfig": {
+        "mode": "diagnose-curve",
+        "dataset": "circles",
+        "architecture": [2, 6, 1],
+        "activation": "tanh",
+        "seed": 13,
+        "candidateLearningRates": [0.001, 0.05, 0.5, 3],
+        "epochs": 120,
+        "batchSize": 16,
+        "trainSplit": 0.7
+      },
+      "passCriteria": {
+        "metric": "curveMatchAccuracy",
+        "threshold": 0.75,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.75, "stars": 1 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40
+    },
+    {
+      "id": "3-4-l2",
+      "title": "Batch Size Trade-off",
+      "difficulty": "medium",
+      "instructions": "Same network, fixed epoch count. Find the batch size that reaches the lowest validation loss, and notice what the gradient noise is doing at each end of the range.",
+      "engineType": "trainingDashboard",
+      "engineConfig": {
+        "mode": "tune-run",
+        "dataset": "spiral",
+        "architecture": [2, 8, 8, 1],
+        "activation": "tanh",
+        "seed": 31,
+        "learningRate": 0.08,
+        "learningRateRange": [0.001, 0.5],
+        "batchSize": 32,
+        "batchSizeOptions": [1, 4, 8, 16, 32, 64, 128],
+        "epochs": 250,
+        "epochsLocked": true,
+        "trainSplit": 0.7
+      },
+      "passCriteria": {
+        "metric": "finalValidationLoss",
+        "threshold": 0.3,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.3, "stars": 1 },
+        { "threshold": 0.2, "stars": 2 },
+        { "threshold": 0.13, "stars": 3 }
+      ],
+      "xpReward": 50
+    },
+    {
+      "id": "3-4-l3",
+      "title": "The Compute Budget",
+      "difficulty": "hard",
+      "instructions": "You have a fixed budget of gradient updates. Spend it — choose architecture, learning rate, batch size and epochs — to reach the lowest validation loss. Every configuration is actually trained before it is scored.",
+      "engineType": "trainingDashboard",
+      "engineConfig": {
+        "mode": "budget-run",
+        "dataset": "spiral",
+        "architecture": [2, 8, 1],
+        "architectureRange": { "maxHidden": 4, "maxUnits": 12 },
+        "activation": "tanh",
+        "activationOptions": ["tanh", "relu", "leakyRelu"],
+        "seed": 47,
+        "learningRate": 0.08,
+        "learningRateRange": [0.001, 1],
+        "batchSize": 16,
+        "batchSizeOptions": [4, 8, 16, 32, 64],
+        "epochs": 200,
+        "maxEpochs": 1200,
+        "updateBudget": 6000,
+        "trainSplit": 0.7
+      },
+      "passCriteria": {
+        "metric": "finalValidationLoss",
+        "threshold": 0.28,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.28, "stars": 1 },
+        { "threshold": 0.18, "stars": 2 },
+        { "threshold": 0.11, "stars": 3 }
+      ],
+      "xpReward": 60
+    }
+  ]
+}

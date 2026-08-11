@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "id": "1-5-probability",
+  "world": 1,
+  "worldTitle": "Fundamentals",
+  "chapterTitle": "Probability Basics",
+  "order": 5,
+  "concept": {
+    "shortExplanation": "A language model does not produce text. It produces one probability distribution over its entire vocabulary, for one position, and then something outside the model picks from it. Every generated sentence is that loop run repeatedly. The distribution you are about to see is pulled live from a real 135-million-parameter model — these are its actual logits, softmaxed, not an illustration of what logits look like.",
+    "ahaMoment": "The model is never 'sure' of anything. Even on the most predictable sentence in English it emits a spread of probabilities, and confidence is just how sharply that spread is concentrated on one token."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 92,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The 135M language model could not be downloaded. It is roughly 90MB — check your connection and available storage, then retry. It runs fully offline once cached."
+  },
+  "xpReward": 150,
+  "unlockRequires": ["1-4-tokenization"],
+  "levels": [
+    {
+      "id": "1-5-l1",
+      "title": "Call the Top Token",
+      "difficulty": "easy",
+      "instructions": "Given a prompt, pick which token the model rates most likely to come next. The candidate list is the model's real top-k, in shuffled order.",
+      "engineType": "probabilityWheel",
+      "engineConfig": {
+        "mode": "predict-top1",
+        "prompts": [
+          "The capital of France is",
+          "Water boils at one hundred degrees",
+          "She opened the door and walked"
+        ],
+        "topK": 5,
+        "allowUserPrompt": false
+      },
+      "passCriteria": {
+        "metric": "predictionAccuracy",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.99, "stars": 3 }
+      ],
+      "xpReward": 40
+    },
+    {
+      "id": "1-5-l2",
+      "title": "Allocate the Mass",
+      "difficulty": "medium",
+      "instructions": "Distribute 100 points across the candidate tokens to match the model's real distribution as closely as you can. Scored by how far your distribution sits from the model's, so hedging costs you exactly as much as it should.",
+      "engineType": "probabilityWheel",
+      "engineConfig": {
+        "mode": "allocate-mass",
+        "prompts": [
+          "The best thing about summer is the",
+          "In order to fix the bug, first"
+        ],
+        "topK": 6,
+        "budget": 100,
+        "allowUserPrompt": true
+      },
+      "passCriteria": {
+        "metric": "calibrationError",
+        "threshold": 0.28,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.28, "stars": 1 },
+        { "threshold": 0.18, "stars": 2 },
+        { "threshold": 0.1, "stars": 3 }
+      ],
+      "xpReward": 50
+    },
+    {
+      "id": "1-5-l3",
+      "title": "Read the Entropy",
+      "difficulty": "hard",
+      "instructions": "Type your own prompt. Before the wheel spins, predict whether the model's next-token distribution will be sharp or flat by estimating its entropy in bits. The wheel's segments are the real probabilities.",
+      "engineType": "probabilityWheel",
+      "engineConfig": {
+        "mode": "estimate-entropy",
+        "prompts": [],
+        "topK": 8,
+        "rounds": 4,
+        "maxEntropyBits": 6,
+        "allowUserPrompt": true
+      },
+      "passCriteria": {
+        "metric": "entropyEstimateError",
+        "threshold": 1.2,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 1.2, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 0.45, "stars": 3 }
+      ],
+      "xpReward": 60
+    }
+  ]
+}

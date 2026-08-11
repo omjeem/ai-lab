@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "id": "4-3-sampling-strategies",
+  "world": 4,
+  "worldTitle": "Sequence Models",
+  "chapterTitle": "Sampling Strategies",
+  "order": 3,
+  "concept": {
+    "shortExplanation": "The model hands you a distribution; sampling decides what you do with it. Temperature rescales the logits before the softmax, flattening or sharpening the whole distribution. Top-k keeps the k most likely tokens and discards the rest. Top-p keeps however many tokens are needed to reach a cumulative probability, so the cut adapts to how confident the model is. None of this changes the model — it changes what you are willing to accept from it.",
+    "ahaMoment": "Greedy decoding is not the most accurate setting, it is the most repetitive one. The interesting output lives in the tail you have to deliberately choose to keep."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 92,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The 135M language model could not be downloaded. Check your connection and storage, then retry — it runs offline once cached."
+  },
+  "xpReward": 140,
+  "unlockRequires": ["4-2-recurrence-memory"],
+  "levels": [
+    {
+      "id": "4-3-l1",
+      "title": "Hit the Entropy Target",
+      "difficulty": "easy",
+      "instructions": "Adjust temperature until the reshaped distribution's entropy lands inside the target band. The distribution is the model's real output for this prompt, rescaled live.",
+      "engineType": "sampling",
+      "engineConfig": {
+        "mode": "entropy-target",
+        "prompt": "The old lighthouse keeper looked out at the",
+        "topK": 20,
+        "temperature": 1,
+        "temperatureRange": [0.1, 2.5],
+        "targetEntropyBits": 2.4,
+        "toleranceBits": 0.25
+      },
+      "passCriteria": {
+        "metric": "entropyError",
+        "threshold": 0.25,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.25, "stars": 1 },
+        { "threshold": 0.12, "stars": 2 },
+        { "threshold": 0.05, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "4-3-l2",
+      "title": "Top-k versus Top-p",
+      "difficulty": "medium",
+      "instructions": "Two prompts, one confident and one uncertain. Find the single top-p setting that behaves sensibly on both, then see what a fixed top-k does to each.",
+      "engineType": "sampling",
+      "engineConfig": {
+        "mode": "compare-truncation",
+        "prompts": [
+          "The chemical symbol for gold is",
+          "The strangest thing I saw that day was a"
+        ],
+        "topK": 40,
+        "topKRange": [1, 50],
+        "topP": 0.9,
+        "topPRange": [0.1, 1],
+        "temperature": 1,
+        "temperatureRange": [0.1, 2],
+        "targetKeptMassLow": 0.75,
+        "targetKeptMassHigh": 0.95
+      },
+      "passCriteria": {
+        "metric": "truncationBalanceScore",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.78, "stars": 2 },
+        { "threshold": 0.9, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "4-3-l3",
+      "title": "Tune for the Job",
+      "difficulty": "hard",
+      "instructions": "Three tasks with different demands — a factual answer, a creative line, a code completion. Set temperature, top-k and top-p for each so the kept distribution matches what the task actually needs.",
+      "engineType": "sampling",
+      "engineConfig": {
+        "mode": "task-tuning",
+        "tasks": [
+          {
+            "id": "factual",
+            "prompt": "The boiling point of water at sea level is",
+            "targetEntropyBits": 0.6,
+            "toleranceBits": 0.35
+          },
+          {
+            "id": "creative",
+            "prompt": "She described the city as a",
+            "targetEntropyBits": 3.4,
+            "toleranceBits": 0.5
+          },
+          {
+            "id": "code",
+            "prompt": "def fibonacci(n):\n    if n <= 1:\n        return",
+            "targetEntropyBits": 1.2,
+            "toleranceBits": 0.4
+          }
+        ],
+        "topK": 40,
+        "topKRange": [1, 50],
+        "topP": 0.95,
+        "topPRange": [0.1, 1],
+        "temperature": 1,
+        "temperatureRange": [0.1, 2.5],
+        "allowUserPrompt": true
+      },
+      "passCriteria": {
+        "metric": "taskTuningScore",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.83, "stars": 2 },
+        { "threshold": 0.95, "stars": 3 }
+      ],
+      "xpReward": 60
+    }
+  ]
+}

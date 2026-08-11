@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "id": "1-2-vector-arithmetic",
+  "world": 1,
+  "worldTitle": "Fundamentals",
+  "chapterTitle": "Vector Arithmetic",
+  "order": 2,
+  "concept": {
+    "shortExplanation": "Because words live in a coordinate space, you can do arithmetic on them. Subtracting one vector from another leaves the difference between the two concepts as a direction you can then add somewhere else. The classic demonstration is king minus man plus woman, which lands near queen — the gender direction, extracted and reapplied. The arithmetic here is genuinely computed on live 384-dimensional embeddings; only the pool of candidate answers is fixed.",
+    "ahaMoment": "The analogy is not a lookup. There is no table anywhere that maps king to queen. You did coordinate arithmetic on numbers that were learned from raw text, and the resulting point in space happened to have queen as its nearest neighbour."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "Xenova/all-MiniLM-L6-v2",
+    "estimatedSizeMB": 23,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The embedding model could not be downloaded. Check your connection and retry — once cached, this chapter runs fully offline."
+  },
+  "xpReward": 130,
+  "unlockRequires": ["1-1-vectors"],
+  "levels": [
+    {
+      "id": "1-2-l1",
+      "title": "The Classic",
+      "difficulty": "easy",
+      "instructions": "Compute king − man + woman, then guess which word from the candidate pool is nearest to the result before revealing it. Every vector here is embedded live.",
+      "engineType": "vectorArithmetic",
+      "engineConfig": {
+        "mode": "fixed-analogy",
+        "terms": [
+          { "word": "king", "op": "add" },
+          { "word": "man", "op": "subtract" },
+          { "word": "woman", "op": "add" }
+        ],
+        "candidatePool": [
+          "queen",
+          "prince",
+          "throne",
+          "castle",
+          "soldier",
+          "farmer",
+          "river",
+          "engine"
+        ],
+        "expectedNearest": "queen",
+        "topK": 3
+      },
+      "passCriteria": {
+        "metric": "analogyAccuracy",
+        "threshold": 1,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 1, "stars": 1 },
+        { "threshold": 2, "stars": 2 },
+        { "threshold": 3, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "1-2-l2",
+      "title": "Build the Direction",
+      "difficulty": "medium",
+      "instructions": "Pick the three words yourself so the result lands nearest to the target word. You are searching for a direction in the embedding space that encodes the relationship — the maths runs live on whatever you type.",
+      "engineType": "vectorArithmetic",
+      "engineConfig": {
+        "mode": "free-terms",
+        "termCount": 3,
+        "target": "paris",
+        "candidatePool": [
+          "paris",
+          "london",
+          "berlin",
+          "madrid",
+          "rome",
+          "tokyo",
+          "france",
+          "germany",
+          "italy",
+          "japan"
+        ],
+        "topK": 5,
+        "maxAttempts": 6
+      },
+      "passCriteria": {
+        "metric": "targetRankScore",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "1-2-l3",
+      "title": "Predict the Similarity",
+      "difficulty": "hard",
+      "instructions": "Before revealing the answer, estimate the cosine similarity between your computed result vector and the target. Scored on how close your estimate is to the real number.",
+      "engineType": "vectorArithmetic",
+      "engineConfig": {
+        "mode": "estimate-similarity",
+        "terms": [
+          { "word": "walking", "op": "add" },
+          { "word": "walk", "op": "subtract" },
+          { "word": "swim", "op": "add" }
+        ],
+        "candidatePool": ["swimming", "swam", "diving", "running", "pool", "water"],
+        "expectedNearest": "swimming",
+        "topK": 3,
+        "rounds": 3
+      },
+      "passCriteria": {
+        "metric": "cosineSimilarityError",
+        "threshold": 0.2,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 0.2, "stars": 1 },
+        { "threshold": 0.12, "stars": 2 },
+        { "threshold": 0.06, "stars": 3 }
+      ],
+      "xpReward": 50
+    }
+  ]
+}

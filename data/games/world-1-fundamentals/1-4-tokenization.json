@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "id": "1-4-tokenization",
+  "world": 1,
+  "worldTitle": "Fundamentals",
+  "chapterTitle": "Tokenization",
+  "order": 4,
+  "concept": {
+    "shortExplanation": "Before anything is embedded, text is cut into tokens, and the model only ever sees those pieces. Byte-pair encoding builds its vocabulary greedily: start from single characters, then repeatedly merge whichever adjacent pair is most frequent in the training corpus, recording the order of those merges. At inference the same merges are replayed in the same order. This is why common English words are one token and unusual strings shatter into many — and why a model's cost, context limit and blind spots all trace back to this step.",
+    "ahaMoment": "The model never saw the word you typed. It saw a sequence of fragments chosen by frequency statistics in a corpus you have never read — and everything it 'knows' about your word is reconstructed from those pieces."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "Xenova/gpt2",
+    "estimatedSizeMB": 4,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The GPT-2 tokenizer files could not be downloaded. Check your connection and retry — the tokenizer is only a few megabytes and works offline once cached."
+  },
+  "xpReward": 130,
+  "unlockRequires": ["1-3-similarity-distance"],
+  "levels": [
+    {
+      "id": "1-4-l1",
+      "title": "Count the Tokens",
+      "difficulty": "easy",
+      "instructions": "Estimate how many tokens the real GPT-2 tokenizer produces for each string, then reveal. Watch what happens to rare words, whitespace and numbers.",
+      "engineType": "tokenMerge",
+      "engineConfig": {
+        "mode": "count-tokens",
+        "samples": [
+          "The quick brown fox",
+          "antidisestablishmentarianism",
+          "1234567890",
+          "  irregular    spacing",
+          "🧬 emoji count too"
+        ],
+        "tolerance": 1
+      },
+      "passCriteria": {
+        "metric": "tokenCountAccuracy",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 35
+    },
+    {
+      "id": "1-4-l2",
+      "title": "Merge Puzzle",
+      "difficulty": "medium",
+      "instructions": "Start from single characters and apply byte-pair merges in the order the real tokenizer would. Each merge you pick is checked against GPT-2's actual merge ranks.",
+      "engineType": "tokenMerge",
+      "engineConfig": {
+        "mode": "merge-puzzle",
+        "words": ["lower", "newest", "tokenizer"],
+        "maxMergesPerWord": 8
+      },
+      "passCriteria": {
+        "metric": "mergeOrderAccuracy",
+        "threshold": 0.7,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.7, "stars": 1 },
+        { "threshold": 0.85, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "1-4-l3",
+      "title": "Break the Tokenizer",
+      "difficulty": "hard",
+      "instructions": "Free text. Find a string under 40 characters that produces the worst possible tokens-per-character ratio — the more tokens the tokenizer needs per character, the more badly it is coping.",
+      "engineType": "tokenMerge",
+      "engineConfig": {
+        "mode": "break-tokenizer",
+        "maxChars": 40,
+        "minChars": 8,
+        "attempts": 5,
+        "allowUserWords": true
+      },
+      "passCriteria": {
+        "metric": "fertilityScore",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.7, "stars": 2 },
+        { "threshold": 0.9, "stars": 3 }
+      ],
+      "xpReward": 50
+    }
+  ]
+}

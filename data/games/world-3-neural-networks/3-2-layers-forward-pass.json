@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "id": "3-2-layers-forward-pass",
+  "world": 3,
+  "worldTitle": "Neural Networks",
+  "chapterTitle": "Layers & Forward Pass",
+  "order": 2,
+  "concept": {
+    "shortExplanation": "Stack neurons into a layer and layers into a network, and each layer gets to reshape the space the next one sees. A problem that no straight line can separate becomes trivially separable once an earlier layer has bent the coordinates. The network in this chapter is real: weights initialised randomly, trained in your browser on a two-dimensional dataset with actual forward and backward passes, no framework involved.",
+    "ahaMoment": "The last layer is still just drawing a straight line. Everything before it exists to move the data until a straight line is enough."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "local:tiny-net",
+    "estimatedSizeMB": 0,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The in-browser network trainer failed to start. Reload the chapter to retry — training happens locally with nothing to download."
+  },
+  "xpReward": 160,
+  "unlockRequires": ["3-1-neurons-activations"],
+  "levels": [
+    {
+      "id": "3-2-l1",
+      "title": "Separate the Circles",
+      "difficulty": "easy",
+      "instructions": "Concentric rings — no single line will do it. Add a hidden layer, train, and reach the target accuracy. The decision boundary redraws from the network's real outputs as it learns.",
+      "engineType": "networkBoundary",
+      "engineConfig": {
+        "dataset": "circles",
+        "sampleCount": 200,
+        "noise": 0.08,
+        "seed": 13,
+        "architecture": [2, 4, 1],
+        "architectureRange": { "maxHidden": 3, "maxUnits": 8 },
+        "activation": "tanh",
+        "learningRate": 0.1,
+        "learningRateRange": [0.001, 1],
+        "epochs": 0,
+        "maxEpochs": 400,
+        "trainSplit": 0.7
+      },
+      "passCriteria": {
+        "metric": "decisionBoundaryAccuracy",
+        "threshold": 0.9,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.9, "stars": 1 },
+        { "threshold": 0.95, "stars": 2 },
+        { "threshold": 0.98, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "3-2-l2",
+      "title": "Solve XOR Properly",
+      "difficulty": "medium",
+      "instructions": "The dataset that defeated the perceptron. Find the smallest network that solves it — the score rewards accuracy per parameter, so brute force will not get you three stars.",
+      "engineType": "networkBoundary",
+      "engineConfig": {
+        "dataset": "xor",
+        "sampleCount": 200,
+        "noise": 0.06,
+        "seed": 7,
+        "architecture": [2, 2, 1],
+        "architectureRange": { "maxHidden": 3, "maxUnits": 8 },
+        "activation": "tanh",
+        "learningRate": 0.15,
+        "learningRateRange": [0.001, 1],
+        "epochs": 0,
+        "maxEpochs": 500,
+        "trainSplit": 0.7,
+        "parameterBudget": 25
+      },
+      "passCriteria": {
+        "metric": "efficiencyScore",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 0.88, "stars": 3 }
+      ],
+      "xpReward": 55
+    },
+    {
+      "id": "3-2-l3",
+      "title": "The Spiral",
+      "difficulty": "hard",
+      "instructions": "Two interleaved spirals. This needs real depth. Design the architecture, pick the activation, train it, and watch each hidden layer's representation unwind the problem for the next one.",
+      "engineType": "networkBoundary",
+      "engineConfig": {
+        "dataset": "spiral",
+        "sampleCount": 300,
+        "noise": 0.05,
+        "seed": 31,
+        "architecture": [2, 8, 8, 1],
+        "architectureRange": { "maxHidden": 4, "maxUnits": 12 },
+        "activation": "tanh",
+        "activationOptions": ["tanh", "relu", "leakyRelu"],
+        "learningRate": 0.08,
+        "learningRateRange": [0.001, 1],
+        "epochs": 0,
+        "maxEpochs": 900,
+        "trainSplit": 0.7,
+        "showHiddenRepresentations": true
+      },
+      "passCriteria": {
+        "metric": "decisionBoundaryAccuracy",
+        "threshold": 0.88,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.88, "stars": 1 },
+        { "threshold": 0.93, "stars": 2 },
+        { "threshold": 0.97, "stars": 3 }
+      ],
+      "xpReward": 60
+    }
+  ]
+}

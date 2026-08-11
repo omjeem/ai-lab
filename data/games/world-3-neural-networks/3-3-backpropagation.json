@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "id": "3-3-backpropagation",
+  "world": 3,
+  "worldTitle": "Neural Networks",
+  "chapterTitle": "Backpropagation",
+  "order": 3,
+  "concept": {
+    "shortExplanation": "Backpropagation answers one question for every weight in the network: if I nudge you, how much does the loss change? It gets those answers efficiently by applying the chain rule backwards from the output, reusing each layer's result for the layer beneath it. The gradients you will inspect here are the real ones, read straight out of the backward pass of the network you trained in the previous chapter — including the ones that vanish.",
+    "ahaMoment": "No weight is ever told what it should be. Each one only receives a signed number saying which way to move and how urgently, and the whole network coordinates through nothing more than that."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "local:tiny-net",
+    "estimatedSizeMB": 0,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The in-browser network failed to initialise, so no gradients can be read. Reload the chapter to retry."
+  },
+  "xpReward": 150,
+  "unlockRequires": ["3-2-layers-forward-pass"],
+  "levels": [
+    {
+      "id": "3-3-l1",
+      "title": "Which Way Does It Move?",
+      "difficulty": "easy",
+      "instructions": "For each highlighted edge, predict whether the gradient will push its weight up or down. Checked against the real signed gradient from the backward pass.",
+      "engineType": "backpropVisual",
+      "engineConfig": {
+        "dataset": "circles",
+        "architecture": [2, 4, 1],
+        "activation": "tanh",
+        "seed": 13,
+        "warmupEpochs": 30,
+        "learningRate": 0.1,
+        "mode": "predict-sign",
+        "rounds": 6,
+        "batchSize": 16
+      },
+      "passCriteria": {
+        "metric": "gradientSignAccuracy",
+        "threshold": 0.66,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.66, "stars": 1 },
+        { "threshold": 0.83, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40
+    },
+    {
+      "id": "3-3-l2",
+      "title": "Rank the Gradients",
+      "difficulty": "medium",
+      "instructions": "Order these edges by the magnitude of the gradient flowing through them, largest first. Scored by rank correlation against the real backward pass.",
+      "engineType": "backpropVisual",
+      "engineConfig": {
+        "dataset": "circles",
+        "architecture": [2, 4, 4, 1],
+        "activation": "tanh",
+        "seed": 13,
+        "warmupEpochs": 40,
+        "learningRate": 0.1,
+        "mode": "rank-magnitude",
+        "rounds": 4,
+        "edgesPerRound": 5,
+        "batchSize": 16
+      },
+      "passCriteria": {
+        "metric": "gradientRankCorrelation",
+        "threshold": 0.45,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.45, "stars": 1 },
+        { "threshold": 0.7, "stars": 2 },
+        { "threshold": 0.88, "stars": 3 }
+      ],
+      "xpReward": 50
+    },
+    {
+      "id": "3-3-l3",
+      "title": "The Vanishing Gradient",
+      "difficulty": "hard",
+      "instructions": "A deep stack of sigmoids. Watch the gradient magnitude collapse as it travels backwards, then find the configuration change that keeps signal alive all the way to the first layer.",
+      "engineType": "backpropVisual",
+      "engineConfig": {
+        "dataset": "spiral",
+        "architecture": [2, 6, 6, 6, 6, 1],
+        "activation": "sigmoid",
+        "activationOptions": ["sigmoid", "tanh", "relu", "leakyRelu"],
+        "seed": 31,
+        "warmupEpochs": 25,
+        "learningRate": 0.1,
+        "mode": "fix-vanishing",
+        "batchSize": 16,
+        "targetFirstLayerGradientRatio": 0.05
+      },
+      "passCriteria": {
+        "metric": "firstLayerGradientRatio",
+        "threshold": 0.05,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.05, "stars": 1 },
+        { "threshold": 0.15, "stars": 2 },
+        { "threshold": 0.3, "stars": 3 }
+      ],
+      "xpReward": 60
+    }
+  ]
+}

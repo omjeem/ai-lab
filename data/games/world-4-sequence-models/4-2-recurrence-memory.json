@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "id": "4-2-recurrence-memory",
+  "world": 4,
+  "worldTitle": "Sequence Models",
+  "chapterTitle": "Why Recurrence Isn't Enough",
+  "order": 2,
+  "concept": {
+    "shortExplanation": "A recurrent network reads one token at a time and carries everything it knows in a single fixed-size hidden vector. That vector is rewritten at every step, so information from early tokens survives only to the extent that repeated rewriting leaves it intact — and it does not. This chapter trains a real character-level RNN in your browser and then reads its actual hidden state as it processes long inputs. The decay you will watch is measured from those real activations, not animated for effect.",
+    "ahaMoment": "The bottleneck is architectural, not a matter of size. Everything the model knows about a thousand tokens of context has to fit through one vector at every single step — and attention exists because someone decided to stop trying to make that work."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "local:char-rnn",
+    "estimatedSizeMB": 0,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The character RNN failed to train in-browser. Reload the chapter to retry — training runs locally and takes a few seconds."
+  },
+  "xpReward": 170,
+  "unlockRequires": ["4-1-ngrams"],
+  "levels": [
+    {
+      "id": "4-2-l1",
+      "title": "Train the RNN",
+      "difficulty": "easy",
+      "instructions": "Train a real character-level recurrent network on the bundled corpus until it can predict the next character better than chance. Every epoch runs live in your browser.",
+      "engineType": "memoryDecay",
+      "engineConfig": {
+        "mode": "train",
+        "corpus": "austen-sample",
+        "hiddenSize": 32,
+        "hiddenSizeRange": [8, 64],
+        "sequenceLength": 40,
+        "learningRate": 0.05,
+        "learningRateRange": [0.001, 0.5],
+        "epochs": 0,
+        "maxEpochs": 60,
+        "seed": 19,
+        "vocabLimit": 64
+      },
+      "passCriteria": {
+        "metric": "characterAccuracy",
+        "threshold": 0.3,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.3, "stars": 1 },
+        { "threshold": 0.4, "stars": 2 },
+        { "threshold": 0.48, "stars": 3 }
+      ],
+      "xpReward": 50
+    },
+    {
+      "id": "4-2-l2",
+      "title": "Watch It Forget",
+      "difficulty": "medium",
+      "instructions": "Feed the trained network a long string and predict at what distance its hidden state stops carrying information about the opening token. Your estimate is checked against the measured state-similarity curve of the real network.",
+      "engineType": "memoryDecay",
+      "engineConfig": {
+        "mode": "predict-decay",
+        "corpus": "austen-sample",
+        "hiddenSize": 32,
+        "sequenceLength": 200,
+        "learningRate": 0.05,
+        "epochs": 40,
+        "seed": 19,
+        "vocabLimit": 64,
+        "probeToken": "Q",
+        "decayThreshold": 0.5,
+        "rounds": 3,
+        "allowUserInput": true
+      },
+      "passCriteria": {
+        "metric": "decayPredictionError",
+        "threshold": 22,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 22, "stars": 1 },
+        { "threshold": 13, "stars": 2 },
+        { "threshold": 7, "stars": 3 }
+      ],
+      "xpReward": 55
+    },
+    {
+      "id": "4-2-l3",
+      "title": "The Recall Task",
+      "difficulty": "hard",
+      "instructions": "A token appears early, then a gap, then the network must recall it. Grow the hidden state as much as you like — find the gap length at which recall collapses anyway, and prove the limit is the architecture rather than the capacity.",
+      "engineType": "memoryDecay",
+      "engineConfig": {
+        "mode": "recall-task",
+        "corpus": "synthetic-recall",
+        "hiddenSize": 32,
+        "hiddenSizeRange": [8, 128],
+        "sequenceLength": 120,
+        "learningRate": 0.05,
+        "learningRateRange": [0.001, 0.5],
+        "epochs": 50,
+        "maxEpochs": 150,
+        "seed": 23,
+        "vocabLimit": 32,
+        "gapLengths": [5, 15, 30, 60, 100],
+        "trials": 40
+      },
+      "passCriteria": {
+        "metric": "recallCollapseScore",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.7, "stars": 2 },
+        { "threshold": 0.85, "stars": 3 }
+      ],
+      "xpReward": 65
+    }
+  ]
+}

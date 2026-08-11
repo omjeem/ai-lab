@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "2-1-perceptron",
+  "world": 2,
+  "worldTitle": "Classical ML",
+  "chapterTitle": "The Perceptron",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "The perceptron is the smallest thing that can honestly be called a trained model: a weight per input, a bias, and a rule that fires if the weighted sum clears zero. Training is one line — when it gets an example wrong, nudge the weights toward that example. Run that nudge over a dataset and a decision boundary emerges without anyone designing it. The perceptron you are about to train is real, initialised randomly, and updated in the browser one example at a time.",
+    "ahaMoment": "You never told it where the line goes. You only told it, repeatedly, when it was wrong — and the line assembled itself out of those corrections. Every model in this course is that same loop with more parameters."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "local:perceptron-2d",
+    "estimatedSizeMB": 0,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The in-browser trainer failed to start. Reload the chapter to retry — no download is involved, this model is trained locally from scratch."
+  },
+  "xpReward": 140,
+  "unlockRequires": ["1-5-probability"],
+  "levels": [
+    {
+      "id": "2-1-l1",
+      "title": "Step Through Training",
+      "difficulty": "easy",
+      "instructions": "Press step to feed one example at a time. Watch the weight vector rotate whenever the perceptron is wrong, and stop when the boundary separates both classes.",
+      "engineType": "linearClassifier",
+      "engineConfig": {
+        "dataset": "linearly-separable",
+        "sampleCount": 40,
+        "seed": 11,
+        "learningRate": 0.1,
+        "initialWeights": [0.4, -0.7],
+        "initialBias": 0.1,
+        "maxSteps": 200,
+        "noise": 0
+      },
+      "passCriteria": {
+        "metric": "classificationAccuracy",
+        "threshold": 0.95,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.95, "stars": 1 },
+        { "threshold": 0.98, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40
+    },
+    {
+      "id": "2-1-l2",
+      "title": "Converge Fast",
+      "difficulty": "medium",
+      "instructions": "Same rule, harder data. Tune the learning rate and reach full separation in as few updates as possible — the score is the number of weight updates you needed.",
+      "engineType": "linearClassifier",
+      "engineConfig": {
+        "dataset": "linearly-separable",
+        "sampleCount": 80,
+        "seed": 29,
+        "learningRate": 0.05,
+        "learningRateRange": [0.01, 1],
+        "initialWeights": [0, 0],
+        "initialBias": 0,
+        "maxSteps": 600,
+        "noise": 0.05
+      },
+      "passCriteria": {
+        "metric": "convergenceSteps",
+        "threshold": 260,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 260, "stars": 1 },
+        { "threshold": 150, "stars": 2 },
+        { "threshold": 80, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "2-1-l3",
+      "title": "The XOR Wall",
+      "difficulty": "hard",
+      "instructions": "Now try XOR. Train as long as you like — you cannot beat this, and finding out exactly how well you can do is the point. Get as close to the ceiling as a single linear boundary allows.",
+      "engineType": "linearClassifier",
+      "engineConfig": {
+        "dataset": "xor",
+        "sampleCount": 120,
+        "seed": 7,
+        "learningRate": 0.08,
+        "learningRateRange": [0.01, 1],
+        "initialWeights": [0.2, 0.2],
+        "initialBias": 0,
+        "maxSteps": 1500,
+        "noise": 0.08,
+        "provesLimitation": true
+      },
+      "passCriteria": {
+        "metric": "classificationAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.6, "stars": 2 },
+        { "threshold": 0.68, "stars": 3 }
+      ],
+      "xpReward": 55
+    }
+  ]
+}

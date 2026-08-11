@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "id": "5-5-full-transformer",
+  "world": 5,
+  "worldTitle": "The Transformer",
+  "chapterTitle": "Full Transformer Assembly",
+  "order": 5,
+  "concept": {
+    "shortExplanation": "Everything from the last four chapters is one block: tokens in, embeddings looked up, positions added, attention mixing information across positions, a residual and a norm, a feed-forward layer transforming each position independently, another residual and norm. Stack that block a few dozen times, project the final state back to vocabulary size, softmax, and you have the architecture behind every model in this course. Assemble it correctly and you will run a real forward pass through a live causal language model, watching each stage produce the input to the next.",
+    "ahaMoment": "There is no separate reasoning component. Everything the model does is this one block repeated, and capability came from repeating it more times on more text rather than from adding new kinds of machinery."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "Xenova/gpt2",
+    "estimatedSizeMB": 124,
+    "fallbackMessage": null,
+    "loadFailureMessage": "GPT-2 could not be downloaded, so the end-to-end forward pass cannot run. It is roughly 124MB — check your connection and storage, then retry. It runs offline once cached."
+  },
+  "xpReward": 190,
+  "unlockRequires": ["5-4-residuals-layernorm"],
+  "levels": [
+    {
+      "id": "5-5-l1",
+      "title": "Order the Pipeline",
+      "difficulty": "easy",
+      "instructions": "Drag the stages into the order data actually flows through a transformer block. A wrong order will not run.",
+      "engineType": "transformerAssembly",
+      "engineConfig": {
+        "mode": "order-stages",
+        "stages": [
+          "tokenize",
+          "embed",
+          "positional-encoding",
+          "qkv-projection",
+          "attention",
+          "residual-add-1",
+          "layer-norm-1",
+          "feed-forward",
+          "residual-add-2",
+          "layer-norm-2",
+          "unembed",
+          "softmax"
+        ],
+        "shuffleSeed": 5,
+        "allowPartialCredit": true
+      },
+      "passCriteria": {
+        "metric": "assemblyAccuracy",
+        "threshold": 0.75,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.75, "stars": 1 },
+        { "threshold": 0.9, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 45
+    },
+    {
+      "id": "5-5-l2",
+      "title": "Fill the Gaps",
+      "difficulty": "medium",
+      "instructions": "Some stages have been removed from the block. Restore the missing ones — leaving a stage out changes what the block can compute, and the scoring reflects which omissions actually break it.",
+      "engineType": "transformerAssembly",
+      "engineConfig": {
+        "mode": "fill-gaps",
+        "stages": [
+          "tokenize",
+          "embed",
+          "positional-encoding",
+          "qkv-projection",
+          "attention",
+          "residual-add-1",
+          "layer-norm-1",
+          "feed-forward",
+          "residual-add-2",
+          "layer-norm-2",
+          "unembed",
+          "softmax"
+        ],
+        "removedStages": ["positional-encoding", "residual-add-1", "layer-norm-2", "softmax"],
+        "criticalStages": ["attention", "softmax", "embed"],
+        "shuffleSeed": 11,
+        "allowPartialCredit": true
+      },
+      "passCriteria": {
+        "metric": "pipelineCompleteness",
+        "threshold": 0.7,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.7, "stars": 1 },
+        { "threshold": 0.87, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 55
+    },
+    {
+      "id": "5-5-l3",
+      "title": "Run It End to End",
+      "difficulty": "hard",
+      "instructions": "Your assembled pipeline now drives a real forward pass through GPT-2 on your own prompt. Every stage renders its true intermediate output. Predict the model's top token from the stage outputs alone, before the final softmax is revealed.",
+      "engineType": "transformerAssembly",
+      "engineConfig": {
+        "mode": "run-end-to-end",
+        "stages": [
+          "tokenize",
+          "embed",
+          "positional-encoding",
+          "qkv-projection",
+          "attention",
+          "residual-add-1",
+          "layer-norm-1",
+          "feed-forward",
+          "residual-add-2",
+          "layer-norm-2",
+          "unembed",
+          "softmax"
+        ],
+        "prompt": "The first rule of debugging is to",
+        "layer": 6,
+        "topK": 5,
+        "rounds": 3,
+        "allowUserPrompt": true
+      },
+      "passCriteria": {
+        "metric": "endToEndScore",
+        "threshold": 0.6,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.6, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 0.94, "stars": 3 }
+      ],
+      "xpReward": 90
+    }
+  ]
+}

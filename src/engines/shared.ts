@@ -216,7 +216,7 @@ export function kMeans(
     centroids.push([...points[chosen]!]);
   }
 
-  let assignments = new Array<number>(n).fill(0);
+  const assignments = new Array<number>(n).fill(0);
   for (let iter = 0; iter < maxIterations; iter++) {
     let changed = false;
     for (let i = 0; i < n; i++) {

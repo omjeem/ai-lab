@@ -1,0 +1,39 @@
+'use client';
+
+/**
+ * Chapter id → its game component.
+ *
+ * Each entry is loaded on demand so a chapter's model wrapper and canvas never
+ * enter the bundle until that chapter is opened.
+ */
+import dynamic from 'next/dynamic';
+import type { ComponentType } from 'react';
+import type { GameRenderProps } from '@/components/chapter/ChapterShell';
+import type { GameDefinition } from '@/types/game';
+
+export interface GameComponentProps extends GameRenderProps {
+  game: GameDefinition;
+}
+
+type GameComponent = ComponentType<GameComponentProps>;
+
+const loading = () => (
+  <div className="grid-field flex flex-1 items-center justify-center">
+    <span className="label">preparing instrument</span>
+  </div>
+);
+
+const REGISTRY: Record<string, GameComponent> = {
+  '1-1-vectors': dynamic(
+    () => import('./1-1-vectors/VectorCanvas').then((m) => m.VectorCanvas),
+    { ssr: false, loading }
+  ),
+};
+
+export function getGameComponent(chapterId: string): GameComponent | null {
+  return REGISTRY[chapterId] ?? null;
+}
+
+export function implementedChapters(): string[] {
+  return Object.keys(REGISTRY);
+}

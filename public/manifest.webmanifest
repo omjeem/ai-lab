@@ -1,0 +1,16 @@
+{
+  "name": "AI Learning Lab",
+  "short_name": "AI Lab",
+  "description": "Learn how models actually work by running them. Real embeddings, real attention, real gradients — in your browser.",
+  "start_url": "/map",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

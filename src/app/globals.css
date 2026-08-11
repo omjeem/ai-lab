@@ -1,26 +1,211 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/* ────────────────────────────────────────────────────────────
+   AI Learning Lab — design tokens
+
+   Instrument, not dashboard. Near-black ground, one accent per World,
+   numbers louder than prose. See Section 6 of the build spec.
+   ──────────────────────────────────────────────────────────── */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Ground: near-black with a cold cast, not neutral grey. */
+  --surface-void: #07070b;
+  --surface-base: #0a0a0f;
+  --surface-panel: #101018;
+  --surface-raised: #16161f;
+  --surface-inset: #05050a;
+
+  /* Hairlines carry most of the structure — no drop shadows anywhere. */
+  --line-faint: #1c1c26;
+  --line: #262633;
+  --line-strong: #34344a;
+
+  --text-primary: #e8e8f0;
+  --text-secondary: #9a9aae;
+  --text-muted: #63637a;
+  --text-inverse: #07070b;
+
+  /* World accents. Set --accent per world; everything downstream reads it. */
+  --accent-world-1: #4cc2ff;
+  --accent-world-2: #ffb340;
+  --accent-world-3: #7df29b;
+  --accent-world-4: #ff7a90;
+  --accent-world-5: #b78cff;
+  --accent-world-6: #f5f5f7;
+  --accent: var(--accent-world-1);
+  --accent-dim: color-mix(in oklab, var(--accent) 30%, var(--surface-base));
+  --accent-faint: color-mix(in oklab, var(--accent) 12%, var(--surface-base));
+
+  --signal-good: #52e0a0;
+  --signal-warn: #ffc857;
+  --signal-bad: #ff6b7a;
+
+  /* Motion. Section 6: purposeful, under 800ms, skippable. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-reveal: 620ms;
+
+  --radius: 3px;
+  --radius-lg: 5px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-void: var(--surface-void);
+  --color-base: var(--surface-base);
+  --color-panel: var(--surface-panel);
+  --color-raised: var(--surface-raised);
+  --color-inset: var(--surface-inset);
+
+  --color-line-faint: var(--line-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-inverse: var(--text-inverse);
+
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-accent-faint: var(--accent-faint);
+
+  --color-good: var(--signal-good);
+  --color-warn: var(--signal-warn);
+  --color-bad: var(--signal-bad);
+
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Per-world accent, set on any container. */
+[data-world='1'] { --accent: var(--accent-world-1); }
+[data-world='2'] { --accent: var(--accent-world-2); }
+[data-world='3'] { --accent: var(--accent-world-3); }
+[data-world='4'] { --accent: var(--accent-world-4); }
+[data-world='5'] { --accent: var(--accent-world-5); }
+[data-world='6'] { --accent: var(--accent-world-6); }
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  color-scheme: dark;
+  background: var(--surface-void);
+  /* Numbers are the loudest thing on screen, so keep them evenly spaced. */
+  font-variant-numeric: tabular-nums;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Display face for headers and branding — never Inter. */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Live metrics: large, monospaced, high contrast. */
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+/* Small caps label used across the HUD. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* The faint grid that makes panels read as instrument surfaces. */
+.grid-field {
+  background-image:
+    linear-gradient(var(--line-faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-faint) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
+}
+
+/* Focus is always visible — keyboard is a first-class input here. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--text-primary);
+}
+
+/* Scrollbars styled to disappear into the instrument. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--surface-inset); }
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 2px solid var(--surface-inset);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Range inputs are a primary control here, so they get real styling. */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--line-strong);
+}
+input[type='range']::-moz-range-track {
+  height: 2px;
+  background: var(--line-strong);
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  /* Touch-sized target, per the mobile-first control rule. */
+  width: 18px;
+  height: 18px;
+  margin-top: -8px;
+  background: var(--accent);
+  border: 3px solid var(--surface-base);
+  border-radius: 2px;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+input[type='range']::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  border: 3px solid var(--surface-base);
+  border-radius: 2px;
+}
+input[type='range']:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* Section 11.5 — motion sensitivity is not an edge case. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

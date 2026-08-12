@@ -5,6 +5,22 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { Button, Heading } from '@/components/ui';
 
+/**
+ * Only ever returns an in-app admin path.
+ *
+ * `next` comes from the query string, so without this a crafted login link could
+ * bounce a freshly authenticated admin to an external site. Protocol-relative
+ * URLs (`//evil.com`) are rejected too, since those are not local.
+ */
+function safeNext(value: string | null): string {
+  const fallback = '/admin/dashboard';
+  if (!value) return fallback;
+  if (!value.startsWith('/admin') || value.startsWith('//')) return fallback;
+  // Bouncing back to the login page would loop.
+  if (value.startsWith('/admin/login')) return fallback;
+  return value;
+}
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -25,7 +41,7 @@ function LoginForm() {
       });
       const payload = (await response.json()) as { ok: boolean; error?: string };
       if (payload.ok) {
-        router.push(params.get('next') ?? '/admin/dashboard');
+        router.push(safeNext(params.get('next')));
         return;
       }
       setError(payload.error ?? 'Login failed');

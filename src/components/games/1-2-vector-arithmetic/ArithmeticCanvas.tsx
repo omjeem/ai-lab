@@ -32,8 +32,14 @@ import {
 } from '@/engines/vectorArithmeticEngine';
 import { norm } from '@/engines/shared';
 import { embeddingModel, EMBEDDING_MODEL_ID } from '@/models/embeddingModel';
+import {
+  DEFAULT_VOCABULARY_SIZE,
+  loadVocabularyIndex,
+  nearestInIndex,
+  type VocabularyIndex,
+} from '@/models/embeddingVocabulary';
 import { ModelGate } from '@/components/ui/ModelGate';
-import { Button, Panel, Readout, Slider, Tag, cx } from '@/components/ui';
+import { Button, Meter, Panel, Readout, Slider, Toggle, Tag, cx } from '@/components/ui';
 import type { GameComponentProps } from '../registry';
 import type { EngineRules } from '@/types/game';
 
@@ -100,6 +106,50 @@ function Board({
   const [pending, setPending] = useState<number | null>(null);
   const [embedError, setEmbedError] = useState<string | null>(null);
 
+  const vocabularySize =
+    typeof state.config.neighbourVocabularySize === 'number'
+      ? state.config.neighbourVocabularySize
+      : DEFAULT_VOCABULARY_SIZE;
+
+  const [vocabulary, setVocabulary] = useState<VocabularyIndex | null>(null);
+  const [vocabularyProgress, setVocabularyProgress] = useState(0);
+  const [vocabularyError, setVocabularyError] = useState<string | null>(null);
+  const [excludeTerms, setExcludeTerms] = useState(true);
+
+  /**
+   * The vocabulary index is built after the level is already playable — it is a
+   * readout, not a gate, so a slow device plays on while it fills in.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void loadVocabularyIndex(vocabularySize, (done, total) => {
+      if (!cancelled) setVocabularyProgress(total === 0 ? 0 : done / total);
+    })
+      .then((index) => {
+        if (!cancelled) setVocabulary(index);
+      })
+      .catch((caught) => {
+        if (!cancelled) {
+          setVocabularyError(caught instanceof Error ? caught.message : String(caught));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [vocabularySize]);
+
+  const neighbours = useMemo(() => {
+    if (!vocabulary || state.resultVector === null) return [];
+    const exclude = excludeTerms
+      ? new Set(state.terms.map((t) => t.word).filter((w): w is string => w !== null))
+      : undefined;
+    return nearestInIndex(vocabulary, state.resultVector, 8, exclude);
+  }, [vocabulary, state.resultVector, state.terms, excludeTerms]);
+
+  // Revealing the true neighbours before the guess is committed would hand over
+  // the answer, so the panel waits for the reveal in the two guessing modes.
+  const showNeighbours = state.mode === 'free-terms' || state.revealed;
+
   /** Embeds whatever the player typed and folds it into the chain. */
   const commitTerm = useCallback(
     async (index: number, raw: string) => {
@@ -147,6 +197,18 @@ function Board({
 
           {embedError && (
             <p className="readout text-xs text-bad">could not embed that word — {embedError}</p>
+          )}
+
+          {showNeighbours && (
+            <NeighbourPanel
+              neighbours={neighbours}
+              vocabulary={vocabulary}
+              progress={vocabularyProgress}
+              error={vocabularyError}
+              excludeTerms={excludeTerms}
+              onExcludeTerms={setExcludeTerms}
+              hasResult={state.resultVector !== null}
+            />
           )}
 
           {state.mode === 'fixed-analogy' && <AnalogyBoard state={state} dispatch={dispatch} />}
@@ -386,6 +448,71 @@ function Trace({
   );
 }
 
+/* ── the model's own vocabulary ─────────────────────────────── */
+
+/**
+ * What the model actually thinks the result vector is closest to.
+ *
+ * A level's `candidatePool` is a multiple-choice set, so on its own it can only
+ * answer with words somebody picked in advance. This searches the vocabulary the
+ * tokenizer already carries, which is why typing three unrelated words returns
+ * unrelated neighbours rather than whatever the level happened to list.
+ */
+function NeighbourPanel({
+  neighbours,
+  vocabulary,
+  progress,
+  error,
+  excludeTerms,
+  onExcludeTerms,
+  hasResult,
+}: {
+  neighbours: RankedCandidate[];
+  vocabulary: VocabularyIndex | null;
+  progress: number;
+  error: string | null;
+  excludeTerms: boolean;
+  onExcludeTerms: (value: boolean) => void;
+  hasResult: boolean;
+}) {
+  const label = vocabulary
+    ? `nearest in the model's own vocabulary · ${vocabulary.words.length.toLocaleString()} words`
+    : "the model's own vocabulary";
+
+  return (
+    <Panel label={label}>
+      {error ? (
+        <p className="text-xs leading-relaxed text-bad">
+          The vocabulary index could not be built — {error}. The level still scores against its own
+          candidate pool.
+        </p>
+      ) : !vocabulary ? (
+        <div className="flex flex-col gap-2">
+          <Meter value={progress} max={1} label="embedding the vocabulary" />
+          <p className="text-xs leading-relaxed text-muted">
+            Every word is being embedded by the same model this chapter is running. Play on — this
+            panel fills in when it finishes.
+          </p>
+        </div>
+      ) : !hasResult ? (
+        <p className="text-xs text-muted">Set every term to see what the result lands nearest to.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <RankedList ranked={neighbours} highlight={null} />
+          <div className="border-t border-line-faint pt-2">
+            <Toggle
+              label="exclude the input words"
+              checked={excludeTerms}
+              onChange={onExcludeTerms}
+              hint="A result sits nearest the terms that built it — the analogy protocol drops them"
+            />
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /* ── mode: fixed analogy ────────────────────────────────────── */
 
 function AnalogyBoard({
@@ -465,7 +592,9 @@ function FreeTermsBoard({ state }: { state: VectorArithmeticState }) {
         <Readout label="best locked score" value={state.bestTargetRankScore} size="sm" tone="accent" />
       </div>
 
-      <Panel label={`nearest ${state.config.topK} of ${state.config.candidatePool.length}`}>
+      <Panel
+        label={`scored pool for this level · ${state.config.candidatePool.length} words · target "${target}"`}
+      >
         {shown.length === 0 ? (
           <p className="text-xs text-muted">
             Fill all three terms to compute a result. Every word you type is embedded live.
@@ -480,8 +609,11 @@ function FreeTermsBoard({ state }: { state: VectorArithmeticState }) {
       </Panel>
 
       <p className="text-xs leading-relaxed text-muted">
-        Committing locks the current ranking into your score and spends an attempt. Only your best
-        attempt counts, so a worse experiment can never cost you progress.
+        This level is scored on where <span className="font-mono text-secondary">{target}</span>
+        {' '}lands inside its own pool, which is why that list only ever holds those{' '}
+        {state.config.candidatePool.length} words. The panel above searches the model&rsquo;s whole
+        vocabulary and answers to anything you type. Committing locks the current ranking into your
+        score and spends an attempt; only your best attempt counts.
       </p>
     </div>
   );

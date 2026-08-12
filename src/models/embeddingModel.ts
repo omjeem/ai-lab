@@ -13,6 +13,16 @@ const EMBEDDING_SIZE_MB = 23;
 
 type FeatureExtractor = Awaited<ReturnType<TransformersModule['pipeline']>>;
 
+/**
+ * The loaded pipeline itself.
+ *
+ * Exposed so the vocabulary index can read this model's own tokenizer rather
+ * than shipping a word list beside it.
+ */
+export async function getEmbeddingExtractor(): Promise<FeatureExtractor> {
+  return getExtractor();
+}
+
 async function getExtractor(): Promise<FeatureExtractor> {
   return loadOnce<FeatureExtractor>(
     'embedding',

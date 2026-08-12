@@ -43,7 +43,8 @@
           "engine"
         ],
         "expectedNearest": "queen",
-        "topK": 3
+        "topK": 3,
+        "neighbourVocabularySize": 8000
       },
       "passCriteria": {
         "metric": "analogyAccuracy",
@@ -80,7 +81,8 @@
           "japan"
         ],
         "topK": 5,
-        "maxAttempts": 6
+        "maxAttempts": 6,
+        "neighbourVocabularySize": 8000
       },
       "passCriteria": {
         "metric": "targetRankScore",
@@ -110,7 +112,8 @@
         "candidatePool": ["swimming", "swam", "diving", "running", "pool", "water"],
         "expectedNearest": "swimming",
         "topK": 3,
-        "rounds": 3
+        "rounds": 3,
+        "neighbourVocabularySize": 8000
       },
       "passCriteria": {
         "metric": "cosineSimilarityError",

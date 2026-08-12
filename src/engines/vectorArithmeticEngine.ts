@@ -29,6 +29,12 @@ export interface VectorArithmeticConfig {
   topK: number;
   maxAttempts?: number;
   rounds?: number;
+  /**
+   * How many words of the model's own vocabulary to index for the live
+   * nearest-neighbour readout. Display only — the engine scores against
+   * `candidatePool`, so changing this cannot move a threshold.
+   */
+  neighbourVocabularySize?: number;
 }
 
 export interface PreparedVectorData {

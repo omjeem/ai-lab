@@ -48,6 +48,51 @@
 
   --radius: 3px;
   --radius-lg: 5px;
+
+  color-scheme: dark;
+}
+
+/* ────────────────────────────────────────────────────────────
+   Light theme.
+
+   Not an inversion — the instrument reads as paper under lab light
+   rather than a photo negative. Surfaces stay close together so the
+   hairlines keep carrying the structure, and the world accents are
+   darkened because a colour tuned to glow on near-black has almost no
+   contrast on white.
+
+   Set by `data-theme` on <html>, written before first paint by the
+   inline script in the root layout.
+   ──────────────────────────────────────────────────────────── */
+
+:root[data-theme='light'] {
+  --surface-void: #e4e7ee;
+  --surface-base: #f4f6f9;
+  --surface-panel: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-inset: #eaedf3;
+
+  --line-faint: #e7eaf1;
+  --line: #d5d9e2;
+  --line-strong: #b6bcc9;
+
+  --text-primary: #11131a;
+  --text-secondary: #4b5160;
+  --text-muted: #646b79;
+  --text-inverse: #ffffff;
+
+  --accent-world-1: #0a70b5;
+  --accent-world-2: #925700;
+  --accent-world-3: #0c7649;
+  --accent-world-4: #bd2c4b;
+  --accent-world-5: #5f34b8;
+  --accent-world-6: #23252c;
+
+  --signal-good: #0a744e;
+  --signal-warn: #855700;
+  --signal-bad: #bf2740;
+
+  color-scheme: light;
 }
 
 @theme inline {
@@ -92,7 +137,7 @@
 }
 
 html {
-  color-scheme: dark;
+  /* `color-scheme` is set with the tokens above so it follows the theme. */
   background: var(--surface-void);
   /* Numbers are the loudest thing on screen, so keep them evenly spaced. */
   font-variant-numeric: tabular-nums;

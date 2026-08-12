@@ -15,6 +15,7 @@ import { detectCapabilities, type DeviceCapabilities } from '@/lib/deviceCapabil
 import { startSyncManager } from '@/lib/syncManager';
 import { useGameProgressStore } from '@/store/useGameProgressStore';
 import { cx, Tag } from '@/components/ui';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -46,6 +47,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
+
           <button
             type="button"
             onClick={() => setSoundEnabled(!soundEnabled)}

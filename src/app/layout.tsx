@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { AppShell } from '@/components/AppShell';
+import { THEME_INIT_SCRIPT } from '@/lib/theme';
 
 /* Self-hosted at build time, so first paint works offline after install. */
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'], display: 'swap' });
@@ -29,8 +30,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0a0a0f',
-  colorScheme: 'dark',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0f' },
+    { media: '(prefers-color-scheme: light)', color: '#f4f6f9' },
+  ],
+  colorScheme: 'dark light',
   width: 'device-width',
   initialScale: 1,
   // The canvases are drag surfaces; a double-tap zoom would fight them.
@@ -43,7 +47,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} h-full`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Blocking on purpose: it must land before the first paint, or the
+            player sees a flash of the theme they did not pick. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full">
         <AppShell>{children}</AppShell>
       </body>

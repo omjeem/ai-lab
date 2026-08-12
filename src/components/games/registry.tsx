@@ -44,6 +44,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./1-5-probability/ProbabilityCanvas').then((m) => m.ProbabilityCanvas),
     { ssr: false, loading }
   ),
+  '2-1-perceptron': dynamic(
+    () => import('./2-1-perceptron/PerceptronCanvas').then((m) => m.PerceptronCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

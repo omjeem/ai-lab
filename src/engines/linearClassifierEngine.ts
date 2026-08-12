@@ -101,7 +101,9 @@ export function generateDataset(
   return samples;
 }
 
-function predict(weights: readonly number[], bias: number, x: readonly number[]): 1 | -1 {
+/** Which side of the boundary a point falls on. Exported so a canvas can draw
+ *  the model's own decision rather than re-implementing it and drifting. */
+export function predict(weights: readonly number[], bias: number, x: readonly number[]): 1 | -1 {
   let sum = bias;
   for (let i = 0; i < weights.length; i++) sum += weights[i]! * (x[i] ?? 0);
   return sum > 0 ? 1 : -1;

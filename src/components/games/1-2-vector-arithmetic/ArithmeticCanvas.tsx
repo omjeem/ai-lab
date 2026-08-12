@@ -16,7 +16,7 @@
  * Keyboard operability (Section 11.5): candidates are buttons, operators are
  * buttons, estimates are native range inputs. There is nothing drag-only here.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Check, Eye, RotateCcw, Sigma } from 'lucide-react';
 import {
@@ -150,25 +150,54 @@ function Board({
   // the answer, so the panel waits for the reveal in the two guessing modes.
   const showNeighbours = state.mode === 'free-terms' || state.revealed;
 
+  // Read through a ref so `commitTerm` stays stable and the typing effect below
+  // is driven by the drafts alone rather than re-firing on every dispatch.
+  const termWords = useRef<(string | null)[]>([]);
+  termWords.current = state.terms.map((t) => t.word);
+
+  /**
+   * Guards against a slow embed landing after a faster keystroke.
+   *
+   * Per slot, not global: one debounce can start an embed for several slots at
+   * once, and a shared counter would let the last one cancel its own siblings.
+   */
+  const request = useRef<Record<number, number>>({});
+
   /** Embeds whatever the player typed and folds it into the chain. */
   const commitTerm = useCallback(
     async (index: number, raw: string) => {
       const word = raw.trim().toLowerCase();
-      if (!word || word === state.terms[index]?.word) return;
+      if (!word || word === termWords.current[index]) return;
+
+      const ticket = (request.current[index] ?? 0) + 1;
+      request.current[index] = ticket;
+      const current = () => ticket === request.current[index];
 
       setPending(index);
       setEmbedError(null);
       try {
         const [vector] = await embeddingModel.embed([word]);
-        if (vector) dispatch({ type: 'SET_TERM', index, word, vector });
+        if (vector && current()) dispatch({ type: 'SET_TERM', index, word, vector });
       } catch (caught) {
-        setEmbedError(caught instanceof Error ? caught.message : String(caught));
+        if (current()) setEmbedError(caught instanceof Error ? caught.message : String(caught));
       } finally {
-        setPending(null);
+        if (current()) setPending(null);
       }
     },
-    [dispatch, state.terms]
+    [dispatch]
   );
+
+  /**
+   * Embeds as you type, so the neighbour list tracks the words instead of
+   * waiting for a blur. Debounced because every change is a real forward pass.
+   */
+  useEffect(() => {
+    if (!editable) return;
+    const timer = setTimeout(() => {
+      drafts.forEach((draft, index) => void commitTerm(index, draft));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [drafts, editable, commitTerm]);
 
   const reset = () => {
     dispatch({ type: 'RESET' });
@@ -573,6 +602,11 @@ function FreeTermsBoard({ state }: { state: VectorArithmeticState }) {
   const shown = state.ranked.slice(0, state.config.topK);
   const targetOutside = rank > state.config.topK;
 
+  // The scored pool is a fixed ten words, so while you are exploring your own
+  // terms it is noise beside the vocabulary search. The rank readout already
+  // carries the score; the list itself is there when you want to check it.
+  const [poolOpen, setPoolOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -592,29 +626,39 @@ function FreeTermsBoard({ state }: { state: VectorArithmeticState }) {
         <Readout label="best locked score" value={state.bestTargetRankScore} size="sm" tone="accent" />
       </div>
 
-      <Panel
-        label={`scored pool for this level · ${state.config.candidatePool.length} words · target "${target}"`}
-      >
-        {shown.length === 0 ? (
-          <p className="text-xs text-muted">
-            Fill all three terms to compute a result. Every word you type is embedded live.
-          </p>
-        ) : (
-          <RankedList
-            ranked={targetOutside ? [...shown, state.ranked[rank - 1]!] : shown}
-            highlight={target}
-            gapBefore={targetOutside ? rank : undefined}
-          />
-        )}
-      </Panel>
+      {poolOpen && (
+        <Panel
+          label={`scored pool for this level · ${state.config.candidatePool.length} words · target "${target}"`}
+        >
+          {shown.length === 0 ? (
+            <p className="text-xs text-muted">
+              Fill all three terms to compute a result. Every word you type is embedded live.
+            </p>
+          ) : (
+            <RankedList
+              ranked={targetOutside ? [...shown, state.ranked[rank - 1]!] : shown}
+              highlight={target}
+              gapBefore={targetOutside ? rank : undefined}
+            />
+          )}
+        </Panel>
+      )}
 
-      <p className="text-xs leading-relaxed text-muted">
-        This level is scored on where <span className="font-mono text-secondary">{target}</span>
-        {' '}lands inside its own pool, which is why that list only ever holds those{' '}
-        {state.config.candidatePool.length} words. The panel above searches the model&rsquo;s whole
-        vocabulary and answers to anything you type. Committing locks the current ranking into your
-        score and spends an attempt; only your best attempt counts.
-      </p>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <p className="max-w-prose text-xs leading-relaxed text-muted">
+          Scored on where <span className="font-mono text-secondary">{target}</span> lands inside
+          this level&rsquo;s own {state.config.candidatePool.length}-word pool. Committing locks the
+          current ranking in and spends an attempt; only your best attempt counts.
+        </p>
+        <button
+          type="button"
+          onClick={() => setPoolOpen((open) => !open)}
+          aria-expanded={poolOpen}
+          className="label whitespace-nowrap underline decoration-dotted underline-offset-4 transition-colors hover:text-accent"
+        >
+          {poolOpen ? 'hide scored pool' : 'show scored pool'}
+        </button>
+      </div>
     </div>
   );
 }

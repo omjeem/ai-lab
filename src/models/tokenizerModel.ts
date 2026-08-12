@@ -42,19 +42,28 @@ async function readMergeRanks(): Promise<ReadonlyMap<string, number>> {
 
   const tokenizer = (await getTokenizer()) as unknown as {
     model?: { merges?: unknown; bpe_ranks?: Map<string, number> };
+    _tokenizerJSON?: { model?: { merges?: unknown } };
   };
 
   const ranks = new Map<string, number>();
   const model = tokenizer.model;
 
-  if (model?.bpe_ranks instanceof Map) {
-    for (const [pair, rank] of model.bpe_ranks) ranks.set(pair, rank);
-  } else if (Array.isArray(model?.merges)) {
-    model.merges.forEach((entry: unknown, index: number) => {
+  const fromList = (entries: unknown[]) => {
+    entries.forEach((entry, index) => {
       // Older builds store "a b"; newer ones store ["a", "b"].
       const key = Array.isArray(entry) ? entry.join(' ') : String(entry);
       if (!ranks.has(key)) ranks.set(key, index);
     });
+  };
+
+  if (model?.bpe_ranks instanceof Map) {
+    for (const [pair, rank] of model.bpe_ranks) ranks.set(pair, rank);
+  } else if (Array.isArray(model?.merges)) {
+    fromList(model.merges);
+  } else if (Array.isArray(tokenizer._tokenizerJSON?.model?.merges)) {
+    // transformers.js 3.x keeps the parsed tokenizer.json and exposes nothing
+    // enumerable on `model`, so the merge list is only reachable through here.
+    fromList(tokenizer._tokenizerJSON.model.merges);
   }
 
   if (ranks.size === 0) {

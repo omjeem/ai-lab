@@ -35,35 +35,50 @@ async function getExtractor(): Promise<FeatureExtractor> {
   );
 }
 
+async function meanPooled(texts: string[], normalize: boolean): Promise<number[][]> {
+  if (texts.length === 0) return [];
+
+  const extractor = await getExtractor();
+  const output = await (extractor as unknown as (
+    input: string[],
+    options: { pooling: 'mean'; normalize: boolean }
+  ) => Promise<unknown>)(texts, { pooling: 'mean', normalize });
+
+  const nested = toNestedArray(output) as unknown;
+
+  // A single input can come back un-nested depending on the pipeline version.
+  if (Array.isArray(nested) && typeof nested[0] === 'number') {
+    return [nested as number[]];
+  }
+
+  const rows = nested as number[][];
+  if (!Array.isArray(rows) || rows.length !== texts.length) {
+    throw new Error(
+      `Embedding model returned ${Array.isArray(rows) ? rows.length : 0} vectors for ${texts.length} inputs`
+    );
+  }
+  return rows;
+}
+
 /**
  * Mean-pooled, L2-normalised embeddings — the standard way this model is used,
  * and what makes cosine similarity the right comparison for World 1.3.
  */
 export const embeddingModel: Embedder = {
-  async embed(texts: string[]): Promise<number[][]> {
-    if (texts.length === 0) return [];
+  embed: (texts) => meanPooled(texts, true),
+};
 
-    const extractor = await getExtractor();
-    const output = await (extractor as unknown as (
-      input: string[],
-      options: { pooling: 'mean'; normalize: boolean }
-    ) => Promise<unknown>)(texts, { pooling: 'mean', normalize: true });
-
-    const nested = toNestedArray(output) as unknown;
-
-    // A single input can come back un-nested depending on the pipeline version.
-    if (Array.isArray(nested) && typeof nested[0] === 'number') {
-      return [nested as number[]];
-    }
-
-    const rows = nested as number[][];
-    if (!Array.isArray(rows) || rows.length !== texts.length) {
-      throw new Error(
-        `Embedding model returned ${Array.isArray(rows) ? rows.length : 0} vectors for ${texts.length} inputs`
-      );
-    }
-    return rows;
-  },
+/**
+ * The same embeddings with their magnitudes left intact.
+ *
+ * Needed wherever length carries meaning. On unit vectors Euclidean distance is
+ * `sqrt(2 - 2cos)`, a strictly decreasing function of cosine, so the two metrics
+ * can never order anything differently — measured against this model, 0 of 336
+ * triples disagree normalised against 74 of 336 raw. Chapter 1.3's third level
+ * asks the player to find that disagreement, which only exists here.
+ */
+export const rawEmbeddingModel: Embedder = {
+  embed: (texts) => meanPooled(texts, false),
 };
 
 /** Warms the model so a chapter can show its download progress up front. */

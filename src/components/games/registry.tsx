@@ -32,6 +32,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./1-2-vector-arithmetic/ArithmeticCanvas').then((m) => m.ArithmeticCanvas),
     { ssr: false, loading }
   ),
+  '1-3-similarity-distance': dynamic(
+    () => import('./1-3-similarity-distance/SimilarityCanvas').then((m) => m.SimilarityCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

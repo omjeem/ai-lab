@@ -17,7 +17,7 @@ next-token distributions.
 | Game logic engines (22) | Complete, 732 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
-| Per-chapter game canvases | **2 of 22 built** (`1-1-vectors`, `1-2-vector-arithmetic`) |
+| Per-chapter game canvases | **3 of 22 built** (`1-1-vectors`, `1-2-vector-arithmetic`, `1-3-similarity-distance`) |
 | Backend, admin, offline sync, PWA | Complete |
 
 Every chapter's logic is finished and tested. What is largely outstanding is the per-chapter
@@ -179,6 +179,15 @@ scoring could be gamed:
   useless constant. Gap-scored levels now carry a `maxValidationLoss` ceiling.
 - `3-4-l2` asked about batch size while the architecture was fixed at one that cannot learn the
   dataset at all, so it was scoring noise.
+- `1-3-l3` asks where cosine and Euclidean disagree, but the embedding wrapper L2-normalises. On unit
+  vectors Euclidean distance is `sqrt(2 - 2cos)`, strictly decreasing in cosine, so the two metrics
+  cannot disagree about anything — 0 of 336 triples, against 74 of 336 unnormalised. Every answer was
+  "they agree" and three identical clicks scored three stars. The level now takes its vectors from
+  `rawEmbeddingModel`, selected by its `metric: "both"` config.
+
+That last one is the case the calibration script cannot reach: it is model-backed, and the engine
+suite injects planted unnormalised vectors, so both were satisfied while the real chapter was
+unwinnable-by-understanding. Model-backed levels have to be played against the real model.
 
 Add a case to the script whenever you add a pure-computation level. Model-backed levels are
 calibrated against the real model in the browser instead.

@@ -6,6 +6,7 @@ import {
   evaluate,
   type SimilarityRankConfig,
 } from '@/engines/similarityRankEngine';
+import { cosineSimilarity, euclideanDistance } from '@/engines/shared';
 import type { Embedder } from '@/engines/deps';
 import type { EngineRules } from '@/types/game';
 import game from '@data/games/world-1-fundamentals/1-3-similarity-distance.json';
@@ -239,6 +240,85 @@ describe('similarityRankEngine — free set', () => {
   it('scores zero when no questions exist yet', async () => {
     const prepared = await prepare(config, { embedder: fakeEmbedder });
     expect(evaluate(initState(config, rulesFor(2), prepared)).value).toBe(0);
+  });
+});
+
+/**
+ * The free-set level is only playable on unnormalised vectors.
+ *
+ * For unit vectors ‖a‖=‖b‖=1, euclidean² = 2 - 2·cos, which is strictly
+ * decreasing in cosine — so the two metrics order every triple identically and
+ * `trueDisagreement` can only ever be false. Feed the level L2-normalised
+ * embeddings and answering "they agree" three times scores a perfect 3 stars
+ * without the player understanding anything.
+ *
+ * The canvas therefore injects `rawEmbeddingModel` whenever `metric` is `both`.
+ * These tests pin the maths that makes that necessary.
+ */
+describe('similarityRankEngine — free set needs unnormalised vectors', () => {
+  const config = configFor(2);
+  const words = ['doctor', 'surgeon', 'nurse', 'hospital', 'lawyer'];
+
+  const unit = (v: number[]): number[] => {
+    const length = Math.sqrt(v.reduce((sum, x) => sum + x * x, 0)) || 1;
+    return v.map((x) => x / length);
+  };
+
+  const questionsFor = async (transform: (v: number[]) => number[]) => {
+    const prepared = await prepare(config, { embedder: fakeEmbedder });
+    let state = initState(config, rulesFor(2), prepared);
+    for (const word of words) {
+      state = applyAction(state, { type: 'ADD_WORD', word, vector: transform(SPACE[word]!) });
+    }
+    return state.questions;
+  };
+
+  it('finds no disagreement at all once every vector is normalised', async () => {
+    const questions = await questionsFor(unit);
+    expect(questions).toHaveLength(config.disagreementRounds!);
+    expect(questions.every((q) => q.trueDisagreement === false)).toBe(true);
+  });
+
+  it('makes "they agree" a perfect score on normalised vectors — the degenerate win', async () => {
+    const prepared = await prepare(config, { embedder: fakeEmbedder });
+    let state = initState(config, rulesFor(2), prepared);
+    for (const word of words) {
+      state = applyAction(state, { type: 'ADD_WORD', word, vector: unit(SPACE[word]!) });
+    }
+    state.questions.forEach((_, i) => {
+      state = applyAction(state, { type: 'ANSWER_DISAGREEMENT', questionIndex: i, value: false });
+    });
+
+    // Passing this level while answering the same way every time is exactly the
+    // failure the raw embedder exists to prevent.
+    expect(evaluate(state).value).toBe(1);
+  });
+
+  it('does find disagreement when magnitudes are left intact', () => {
+    // Identical directions in both sets — only the lengths differ, which is the
+    // single thing cosine throws away and Euclidean keeps.
+    const stretch = (v: number[]) => v.map((x) => x * (1 + 4 * v[1]!));
+
+    const countDisagreements = (transform: (v: number[]) => number[]) => {
+      const vectors = Object.fromEntries(words.map((w) => [w, transform(SPACE[w]!)]));
+      let count = 0;
+      for (const a of words) {
+        for (const x of words) {
+          for (const y of words) {
+            if (a === x || a === y || x === y) continue;
+            const cosinePrefersX =
+              cosineSimilarity(vectors[a]!, vectors[x]!) > cosineSimilarity(vectors[a]!, vectors[y]!);
+            const euclideanPrefersX =
+              euclideanDistance(vectors[a]!, vectors[x]!) < euclideanDistance(vectors[a]!, vectors[y]!);
+            if (cosinePrefersX !== euclideanPrefersX) count++;
+          }
+        }
+      }
+      return count;
+    };
+
+    expect(countDisagreements(unit)).toBe(0);
+    expect(countDisagreements(stretch)).toBeGreaterThan(0);
   });
 });
 

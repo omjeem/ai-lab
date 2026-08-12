@@ -17,7 +17,7 @@ next-token distributions.
 | Game logic engines (22) | Complete, 732 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
-| Per-chapter game canvases | **4 of 22 built** (World 1 chapters 1–4) |
+| Per-chapter game canvases | **5 of 22 built** (all of World 1) |
 | Backend, admin, offline sync, PWA | Complete |
 
 Every chapter's logic is finished and tested. What is largely outstanding is the per-chapter
@@ -156,6 +156,15 @@ evaluate(state) → ScoreResult
 6. **Add it to `curriculum-manifest.json`** with its unlock requirements.
 
 ### Adding a chapter's canvas
+
+Two things every canvas that hides its answers until submit has to get right:
+
+- **Keep the reveal in local component state, never `state.status === 'complete'`.** Engines set the
+  status back to `active` on any subsequent action, so a post-reveal control — spinning the wheel,
+  logging another attempt — silently un-reveals what was just shown.
+- **Call `useRetrySignal`** (`src/components/games/useRetrySignal.ts`). The HUD's "Try again" only
+  puts the shell back into `playing`; without the hook the player retries onto a board that still
+  shows the answers and, for something like a fully merged BPE puzzle, cannot be replayed at all.
 
 `src/components/games/registry.tsx` maps a chapter id to a lazily-loaded component. Use
 `1-1-vectors/VectorCanvas.tsx` as the reference: it wraps its content in `<ModelGate>` (which owns

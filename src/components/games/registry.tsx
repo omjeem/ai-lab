@@ -40,6 +40,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./1-4-tokenization/TokenizationCanvas').then((m) => m.TokenizationCanvas),
     { ssr: false, loading }
   ),
+  '1-5-probability': dynamic(
+    () => import('./1-5-probability/ProbabilityCanvas').then((m) => m.ProbabilityCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

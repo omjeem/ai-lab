@@ -30,6 +30,7 @@ import {
 import { tokenizerModel, prettifyToken, TOKENIZER_MODEL_ID } from '@/models/tokenizerModel';
 import { ModelGate } from '@/components/ui/ModelGate';
 import { Button, Meter, Panel, Readout, Tag, cx } from '@/components/ui';
+import { useRetrySignal } from '../useRetrySignal';
 import type { GameComponentProps } from '../registry';
 import type { EngineRules } from '@/types/game';
 
@@ -82,12 +83,27 @@ function Board({
 }) {
   useEffect(() => onScore(evaluate(state)), [state, onScore]);
 
-  const revealed = state.status === 'complete';
+  /**
+   * Local rather than read off `state.status`: engine actions set the status
+   * back to `active`, so logging another attempt after submitting would quietly
+   * un-reveal the tokens.
+   */
+  const [revealed, setRevealed] = useState(false);
+  const [runId, setRunId] = useState(0);
+
+  const resetRun = useCallback(() => {
+    dispatch({ type: 'RESET' });
+    setRevealed(false);
+    setRunId((n) => n + 1);
+  }, [dispatch]);
+
+  // A merge puzzle played to the end cannot be replayed without this.
+  useRetrySignal(resetRun);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="grid-field flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-        <div className="mx-auto my-auto flex w-full max-w-3xl flex-col gap-4">
+        <div key={runId} className="mx-auto my-auto flex w-full max-w-3xl flex-col gap-4">
           {state.mode === 'count-tokens' && (
             <CountBoard state={state} dispatch={dispatch} revealed={revealed} />
           )}
@@ -99,7 +115,7 @@ function Board({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line p-3">
-        <Button onClick={() => dispatch({ type: 'RESET' })}>
+        <Button onClick={resetRun}>
           <RotateCcw size={13} strokeWidth={2} />
           Reset
         </Button>
@@ -109,6 +125,7 @@ function Board({
           onSubmit={() => {
             onSubmit(evaluate(state));
             dispatch({ type: 'SUBMIT' });
+            setRevealed(true);
           }}
         />
       </div>

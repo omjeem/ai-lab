@@ -36,6 +36,7 @@ import {
 } from '@/models/embeddingModel';
 import { ModelGate } from '@/components/ui/ModelGate';
 import { Button, Panel, Tag, cx } from '@/components/ui';
+import { useRetrySignal } from '../useRetrySignal';
 import type { GameComponentProps } from '../registry';
 import type { EngineRules } from '@/types/game';
 
@@ -100,19 +101,34 @@ function Board({
 }) {
   useEffect(() => onScore(evaluate(state)), [state, onScore]);
 
-  // The engine's own `complete` status drives the reveal, so "what the model
-  // really thinks" appears exactly once the answer is locked in.
-  const revealed = state.status === 'complete';
+  /**
+   * Whether the geometry is on screen.
+   *
+   * Local rather than read off `state.status`: engine actions set the status
+   * back to `active`, so adding a word after submitting would quietly
+   * un-reveal what had already been shown.
+   */
+  const [revealed, setRevealed] = useState(false);
+  const [runId, setRunId] = useState(0);
+
+  const resetRun = useCallback(() => {
+    dispatch({ type: 'RESET' });
+    setRevealed(false);
+    setRunId((n) => n + 1);
+  }, [dispatch]);
+
+  useRetrySignal(resetRun);
 
   const submit = () => {
     onSubmit(evaluate(state));
     dispatch({ type: 'SUBMIT' });
+    setRevealed(true);
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="grid-field flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-        <div className="mx-auto my-auto flex w-full max-w-3xl flex-col gap-4">
+        <div key={runId} className="mx-auto my-auto flex w-full max-w-3xl flex-col gap-4">
           {state.mode === 'rank' && (
             <RankBoard state={state} dispatch={dispatch} revealed={revealed} />
           )}
@@ -124,7 +140,7 @@ function Board({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-line p-3">
-        <Button onClick={() => dispatch({ type: 'RESET' })}>
+        <Button onClick={resetRun}>
           <RotateCcw size={13} strokeWidth={2} />
           Reset
         </Button>

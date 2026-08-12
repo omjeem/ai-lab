@@ -28,6 +28,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./1-1-vectors/VectorCanvas').then((m) => m.VectorCanvas),
     { ssr: false, loading }
   ),
+  '1-2-vector-arithmetic': dynamic(
+    () => import('./1-2-vector-arithmetic/ArithmeticCanvas').then((m) => m.ArithmeticCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

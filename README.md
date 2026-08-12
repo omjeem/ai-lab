@@ -17,7 +17,7 @@ next-token distributions.
 | Game logic engines (22) | Complete, 732 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
-| Per-chapter game canvases | **1 of 22 built** (`1-1-vectors`) |
+| Per-chapter game canvases | **2 of 22 built** (`1-1-vectors`, `1-2-vector-arithmetic`) |
 | Backend, admin, offline sync, PWA | Complete |
 
 Every chapter's logic is finished and tested. What is largely outstanding is the per-chapter

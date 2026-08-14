@@ -52,6 +52,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./2-2-loss-functions/LossCanvas').then((m) => m.LossCanvas),
     { ssr: false, loading }
   ),
+  '2-3-gradient-descent': dynamic(
+    () => import('./2-3-gradient-descent/GradientDescentCanvas').then((m) => m.GradientDescentCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

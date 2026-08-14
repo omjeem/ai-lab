@@ -36,7 +36,21 @@ export interface MemoryDecayConfig {
 
 export interface PreparedRnnCorpus {
   text: string;
+  /**
+   * For the synthetic recall corpus: the length of each independent
+   * marker-gap-marker segment, in order. Lets training reset the hidden state
+   * at every segment boundary instead of sliding a fixed window across the
+   * concatenated text, which is what the recall task's evaluation itself does
+   * (`measureRecall` always starts from a fresh state). Undefined for prose
+   * corpora, which have no such boundaries.
+   */
+  segmentLengths?: number[];
 }
+
+/** The two characters `generateRecallCorpus` ever places at a segment boundary. */
+const RECALL_MARKER_CHARS = 'XY';
+/** The alphabet `generateRecallCorpus` ever fills a gap with. */
+const RECALL_FILLER_CHARS = 'abcdefgh';
 
 export interface DecayRound {
   /** Distance at which the state stops distinguishing the early token. */
@@ -62,6 +76,8 @@ export interface MemoryDecayState {
   epochsTrained: number;
   vocab: CharVocab;
   encoded: number[];
+  /** Segment boundaries for the synthetic recall corpus; null for prose. */
+  segmentLengths: number[] | null;
   rnn: TinyRNN;
   lossHistory: number[];
   rounds: DecayRound[];
@@ -84,28 +100,29 @@ export async function prepare(
   // The recall task is a controlled probe, so its data is generated rather than
   // drawn from prose — the gap length has to be exact for the measurement.
   if (config.corpus === 'synthetic-recall') {
-    return { text: generateRecallCorpus(config) };
+    return generateRecallCorpus(config);
   }
   const text = await deps.corpus.load(config.corpus);
   if (text.length === 0) throw new Error(`Corpus "${config.corpus}" is empty`);
   return { text };
 }
 
-function generateRecallCorpus(config: MemoryDecayConfig): string {
+function generateRecallCorpus(config: MemoryDecayConfig): PreparedRnnCorpus {
   const rng = createRng(config.seed);
-  const filler = 'abcdefgh';
-  const markers = 'XY';
   let out = '';
+  const segmentLengths: number[] = [];
 
   for (let i = 0; i < 200; i++) {
-    const marker = markers[Math.floor(rng() * markers.length)]!;
+    const marker = RECALL_MARKER_CHARS[Math.floor(rng() * RECALL_MARKER_CHARS.length)]!;
     const gap = (config.gapLengths ?? [10])[i % (config.gapLengths ?? [10]).length]!;
     let middle = '';
-    for (let j = 0; j < gap; j++) middle += filler[Math.floor(rng() * filler.length)]!;
+    for (let j = 0; j < gap; j++) middle += RECALL_FILLER_CHARS[Math.floor(rng() * RECALL_FILLER_CHARS.length)]!;
     // The marker must be recalled after the gap to predict the closing token.
-    out += `${marker}${middle}${marker}`;
+    const segment = `${marker}${middle}${marker}`;
+    out += segment;
+    segmentLengths.push(segment.length);
   }
-  return out;
+  return { text: out, segmentLengths };
 }
 
 function trainCopy(
@@ -132,6 +149,48 @@ function trainCopy(
       windows++;
     }
     losses.push(windows === 0 ? 0 : total / windows);
+  }
+
+  return { rnn: copy, losses };
+}
+
+/**
+ * Trains on each independently-generated segment as its own sequence,
+ * resetting the hidden state at every boundary.
+ *
+ * The recall task's segments are concatenated into one corpus for storage,
+ * but `trainCopy`'s sliding window has no notion of where one ends and the
+ * next begins — a fixed-size window drifts in and out of alignment with the
+ * marker-gap-marker spans it should be teaching, diluting the one position
+ * per segment that actually carries the recall signal among many unrelated
+ * ones. `measureRecall` always starts from a fresh state, so training has to
+ * match that or it is teaching a different task from the one it is scored on.
+ */
+function trainSegments(
+  rnn: TinyRNN,
+  encoded: readonly number[],
+  segmentLengths: readonly number[],
+  learningRate: number,
+  epochs: number
+): { rnn: TinyRNN; losses: number[] } {
+  const copy = rnn.clone();
+  const losses: number[] = [];
+
+  for (let e = 0; e < epochs; e++) {
+    let total = 0;
+    let count = 0;
+    let cursor = 0;
+
+    for (const length of segmentLengths) {
+      const inputs = encoded.slice(cursor, cursor + length - 1);
+      const targets = encoded.slice(cursor + 1, cursor + length);
+      if (inputs.length > 0) {
+        total += copy.trainSequence(inputs, targets, learningRate);
+        count++;
+      }
+      cursor += length;
+    }
+    losses.push(count === 0 ? 0 : total / count);
   }
 
   return { rnn: copy, losses };
@@ -194,6 +253,20 @@ function buildDecayRounds(
   });
 }
 
+function trainWarmup(
+  config: MemoryDecayConfig,
+  rnn: TinyRNN,
+  encoded: readonly number[],
+  segmentLengths: readonly number[] | undefined,
+  learningRate: number,
+  epochs: number,
+  startEpoch: number
+): { rnn: TinyRNN; losses: number[] } {
+  return segmentLengths
+    ? trainSegments(rnn, encoded, segmentLengths, learningRate, epochs)
+    : trainCopy(rnn, encoded, config.sequenceLength, learningRate, epochs, startEpoch);
+}
+
 export function initState(
   config: MemoryDecayConfig,
   rules: EngineRules,
@@ -212,7 +285,7 @@ export function initState(
   const warmup = config.mode === 'train' ? 0 : config.epochs;
   const trained =
     warmup > 0
-      ? trainCopy(rnn, encoded, config.sequenceLength, config.learningRate, warmup, 0)
+      ? trainWarmup(config, rnn, encoded, prepared.segmentLengths, config.learningRate, warmup, 0)
       : { rnn, losses: [] };
 
   return {
@@ -226,6 +299,7 @@ export function initState(
     epochsTrained: warmup,
     vocab,
     encoded,
+    segmentLengths: prepared.segmentLengths ?? null,
     rnn: trained.rnn,
     lossHistory: trained.losses,
     rounds:
@@ -236,18 +310,37 @@ export function initState(
   };
 }
 
-/** Real recall accuracy at each gap length, measured on the trained network. */
+/**
+ * Real recall accuracy at each gap length, measured on the trained network.
+ *
+ * Draws the marker and filler from the same two pools `generateRecallCorpus`
+ * ever actually used — a network trained on "X"/"Y" as the only two
+ * recallable identities has no reason to have learned anything about the
+ * other nine symbols in the vocabulary, so testing against the full
+ * vocabulary would be scoring a task the network was never taught.
+ */
 export function measureRecall(state: MemoryDecayState): RecallResult[] {
   const gaps = state.config.gapLengths ?? [];
   const trials = state.config.trials ?? 20;
   const vocabSize = state.vocab.chars.length;
   const rng = createRng(state.config.seed * 97 + 5);
 
+  const markerPool = [...RECALL_MARKER_CHARS]
+    .map((ch) => state.vocab.indexOf.get(ch))
+    .filter((i): i is number => i !== undefined);
+  const fillerPool = [...RECALL_FILLER_CHARS]
+    .map((ch) => state.vocab.indexOf.get(ch))
+    .filter((i): i is number => i !== undefined);
+  // Falls back to the whole vocabulary for a corpus that isn't the synthetic
+  // recall generator, so the function stays correct for any future one.
+  const markers = markerPool.length > 0 ? markerPool : Array.from({ length: vocabSize }, (_, i) => i);
+  const fillers = fillerPool.length > 0 ? fillerPool : markers;
+
   return gaps.map((gap) => {
     let correct = 0;
     for (let trial = 0; trial < trials; trial++) {
-      const marker = Math.floor(rng() * vocabSize);
-      const filler = Array.from({ length: gap }, () => Math.floor(rng() * vocabSize));
+      const marker = markers[Math.floor(rng() * markers.length)]!;
+      const filler = Array.from({ length: gap }, () => fillers[Math.floor(rng() * fillers.length)]!);
       const distribution = state.rnn.predictNext([marker, ...filler]);
 
       let best = 0;
@@ -270,10 +363,11 @@ export function applyAction(
       const epochs = Math.max(0, Math.min(action.epochs, max - state.epochsTrained));
       if (epochs === 0) return state;
 
-      const { rnn, losses } = trainCopy(
+      const { rnn, losses } = trainWarmup(
+        state.config,
         state.rnn,
         state.encoded,
-        state.config.sequenceLength,
+        state.segmentLengths ?? undefined,
         state.learningRate,
         epochs,
         state.epochsTrained
@@ -342,6 +436,7 @@ export function applyAction(
     case 'RESET':
       return initState(state.config, state.rules, {
         text: state.vocab.chars.length > 0 ? decodeAll(state) : '',
+        segmentLengths: state.segmentLengths ?? undefined,
       });
 
     case 'SUBMIT':

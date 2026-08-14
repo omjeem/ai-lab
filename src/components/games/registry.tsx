@@ -80,6 +80,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./4-1-ngrams/NgramCanvas').then((m) => m.NgramCanvas),
     { ssr: false, loading }
   ),
+  '4-2-recurrence-memory': dynamic(
+    () => import('./4-2-recurrence-memory/RecurrenceCanvas').then((m) => m.RecurrenceCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

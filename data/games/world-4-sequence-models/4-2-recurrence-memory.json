@@ -48,7 +48,12 @@
         { "threshold": 0.4, "stars": 2 },
         { "threshold": 0.48, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Watch the loss curve, not the epoch counter. A bigger hidden state gives the network more room to store what it has learned; a higher learning rate makes each update count for more — both matter more than raw training time.",
+        "The default hidden size (32) plateaus under 0.37 accuracy however long you train it — the ceiling is the network's capacity, not the clock. Grow the hidden state before you grow the epoch count.",
+        "Checked directly on this corpus: default settings (hidden 32) plateau around 0.35–0.37 accuracy (1 star) by epoch 60. Growing the hidden state to 64 and raising the learning rate to about 0.2, trained the full 60 epochs, reaches roughly 0.44–0.47 (2 stars) — the strongest verified combination found in this range."
+      ]
     },
     {
       "id": "4-2-l2",
@@ -80,7 +85,12 @@
         { "threshold": 13, "stars": 2 },
         { "threshold": 7, "stars": 3 }
       ],
-      "xpReward": 55
+      "xpReward": 55,
+      "hints": [
+        "You're reading a real curve, not guessing — cosine similarity between the two hidden states climbs toward 1 as the network overwrites what made them different. The step where it first crosses the threshold is the answer.",
+        "For a network this small the state gets swamped fast — most of the erasing happens in the first handful of steps, not gradually across the whole 200-token sequence. Look at the very start of the curve, not the tail.",
+        "Checked against this exact trained network (seed 19, 40 warmup epochs): the three rounds' hidden states become indistinguishable (similarity ≥ 0.99) at distances 2, 1 and 1 — the opening token is essentially gone within a step or two, every time."
+      ]
     },
     {
       "id": "4-2-l3",
@@ -113,7 +123,12 @@
         { "threshold": 0.7, "stars": 2 },
         { "threshold": 0.85, "stars": 3 }
       ],
-      "xpReward": 65
+      "xpReward": 65,
+      "hints": [
+        "Recall is measured fresh each trial — a marker, then a random gap, then the network has to name the marker again with no other clue. The pattern that matters is how sharply accuracy falls as the gap grows, not the raw number at any one gap.",
+        "Growing the hidden state pushes the distance where recall collapses further out, but it doesn't remove the collapse — even a much bigger state still forgets eventually, because the bottleneck is the single fixed-size vector every step has to pass through, not how big that vector is.",
+        "Checked directly on this exact setup: even at the default warmup (50 epochs, hidden size 32) recall already holds up close (gap 5: around 75–85%) while every longer gap sits near 0% — enough for 2 stars with no extra training at all. Pushing training a bit further (to roughly 60–70 epochs) tends to sharpen the near-gap accuracy toward 3-star territory, but training all the way to the epoch budget (150) tends to make it worse again, since this small fixed training set starts to destabilise a plain RNN well before then — more training is not automatically better here."
+      ]
     }
   ]
 }

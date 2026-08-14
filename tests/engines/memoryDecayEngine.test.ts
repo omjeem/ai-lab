@@ -288,6 +288,72 @@ describe('memoryDecayEngine — recall task', () => {
   });
 });
 
+describe('memoryDecayEngine — recall task is genuinely learnable', () => {
+  /**
+   * Regression coverage for a real bug: training used to slide a fixed-size
+   * window across the concatenated corpus (drifting out of alignment with
+   * segment boundaries most of the time) and `measureRecall` evaluated
+   * against the *entire* vocabulary rather than the two marker characters
+   * `generateRecallCorpus` ever actually used. Together those meant the
+   * network was training on a diluted, misaligned signal and being scored on
+   * a task it was never taught — recall accuracy sat at chance for every
+   * hidden size and epoch count tried, regardless of gap length, which made
+   * every star threshold on this level unreachable. This suite trains a real
+   * (tiny, fast) network on the actual code path and checks it clears a
+   * result no amount of pass-criteria tuning could fix on its own.
+   */
+  const smallConfig: MemoryDecayConfig = {
+    mode: 'recall-task',
+    corpus: 'synthetic-recall',
+    hiddenSize: 16,
+    sequenceLength: 40,
+    learningRate: 0.1,
+    epochs: 40,
+    maxEpochs: 60,
+    seed: 5,
+    vocabLimit: 16,
+    gapLengths: [2, 50],
+    trials: 30,
+  };
+
+  it('splits the generated corpus into segments that each start and end on a marker', async () => {
+    const prepared = await prepare(smallConfig, { corpus: fakeCorpus });
+    expect(prepared.segmentLengths).toBeDefined();
+    expect(prepared.segmentLengths!.length).toBe(200);
+    expect(prepared.segmentLengths!.reduce((a, b) => a + b, 0)).toBe(prepared.text.length);
+
+    let cursor = 0;
+    for (const length of prepared.segmentLengths!) {
+      const segment = prepared.text.slice(cursor, cursor + length);
+      expect(segment[0]).toMatch(/[XY]/);
+      expect(segment.at(-1)).toBe(segment[0]);
+      cursor += length;
+    }
+  });
+
+  it('trains a network that recalls a near marker far better than a far one', async () => {
+    const prepared = await prepare(smallConfig, { corpus: fakeCorpus });
+    const state = initState(smallConfig, rulesFor(2), prepared);
+    const results = measureRecall(state);
+
+    const near = results.find((r) => r.gap === 2)!;
+    const far = results.find((r) => r.gap === 50)!;
+    // Chance alone (predicting the wrong one of two markers, or a filler
+    // character instead of either) sits well under 0.5.
+    expect(near.accuracy).toBeGreaterThan(0.5);
+    expect(near.accuracy).toBeGreaterThan(far.accuracy);
+  });
+
+  it('scores that result at 3 stars, so the level is genuinely passable', async () => {
+    const prepared = await prepare(smallConfig, { corpus: fakeCorpus });
+    let state = initState(smallConfig, rulesFor(2), prepared);
+    state = applyAction(state, { type: 'RUN_RECALL' });
+    const result = evaluate(state);
+    expect(result.passed).toBe(true);
+    expect(result.stars).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe('memoryDecayEngine — level config coverage', () => {
   it('handles every shipped level', async () => {
     for (const [i, level] of game.levels.entries()) {

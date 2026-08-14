@@ -14,10 +14,10 @@ next-token distributions.
 | Layer | State |
 | --- | --- |
 | Curriculum (22 chapters, 67 levels) | Complete, schema-validated |
-| Game logic engines (22) | Complete, 732 tests passing |
+| Game logic engines (22) | Complete, 766 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
-| Per-chapter game canvases | **14 of 22 built** (all of World 1, plus 2-1 through 2-4, all of World 3, 4-1) |
+| Per-chapter game canvases | **15 of 22 built** (all of World 1, plus 2-1 through 2-4, all of World 3, 4-1, 4-2) |
 | Backend, admin, offline sync, PWA | Complete |
 
 Every chapter's logic is finished and tested. What is largely outstanding is the per-chapter
@@ -89,7 +89,7 @@ Paste the line into `.env.local`. The script refuses passwords under 12 characte
 ```bash
 pnpm dev              # validates the curriculum, then starts the dev server
 pnpm build            # validates the curriculum, then builds
-pnpm test             # 732 unit tests, fully offline, no model downloads
+pnpm test             # 766 unit tests, fully offline, no model downloads
 pnpm test:watch
 pnpm test:coverage
 pnpm typecheck        # tsc --noEmit

@@ -45,7 +45,12 @@
         { "threshold": 0.75, "stars": 1 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 40
+      "xpReward": 40,
+      "hints": [
+        "Each line really was trained at one of the four rates on offer — read the shape, not just where it ends. A rate that's too small barely moves the loss at all; one that's too large can spike before it (maybe) settles.",
+        "Read them as a spectrum: the flattest curve is the smallest rate, the one that plunges cleanly to the lowest loss is a well-tuned middle rate, and any curve that shoots up high before coming back down is the largest rate — it's covering too much ground per step to be stable.",
+        "Checked against this exact run (seed 13): the curve running 0.673 → 0.017 is lr = 1; the one barely moving, 0.713 → 0.703, is lr = 0.001; the one drifting down slowly, 0.708 → 0.559, is lr = 0.05; and the one spiking above 13 before settling near 4.9 is lr = 10 — it never recovers within these 120 epochs."
+      ]
     },
     {
       "id": "3-4-l2",
@@ -77,7 +82,12 @@
         { "threshold": 0.01, "stars": 2 },
         { "threshold": 0.002, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Epochs are fixed here, so batch size decides how many weight updates you actually get: a batch of 1 gets far more updates than a batch of 128 in the same 250 epochs. Try the small end of the range first.",
+        "Once you've picked a batch size, the learning rate needs raising to match — a small batch with the default learning rate is stable but slow, and small batch plus a low rate wastes most of those extra updates. Push both down in batch size and up in learning rate together.",
+        "Checked directly: batch size 1 at the default learning rate (0.08) already clears 1 star (loss ≈ 0.0026); raising the learning rate to 0.15 at batch size 1 clears 3 stars (loss ≈ 0.0017, target ≤ 0.002). At the other end, batch size 128 fails to pass even at the maximum allowed learning rate (0.5, loss ≈ 0.106) — too few, too noisy updates to recover in this budget."
+      ]
     },
     {
       "id": "3-4-l3",
@@ -112,7 +122,12 @@
         { "threshold": 0.18, "stars": 2 },
         { "threshold": 0.11, "stars": 3 }
       ],
-      "xpReward": 60
+      "xpReward": 60,
+      "hints": [
+        "The budget is spent in updates, not epochs — a smaller batch size or more epochs both burn through it faster. Check the projected-updates meter before you run; overspending gets charged straight back into your score as a penalty on top of the loss.",
+        "Architecture size isn't what's holding this back on the spiral dataset — the activation is. tanh's derivative shrinks the gradient the same way it did in the vanishing-gradient chapter, and no amount of budget rescues it. A rectifying activation doesn't have that problem.",
+        "Checked directly: tanh scores 0 stars at every batch size and learning rate tried, spending the full 6000-update budget and still stuck around 0.55–0.65 loss. Swapping to ReLU with the same architecture, learning rate 0.2 and batch size 16 reaches about 0.086 loss — 3 stars — using exactly the 6000-update budget."
+      ]
     }
   ]
 }

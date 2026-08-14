@@ -72,6 +72,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./3-3-backpropagation/BackpropCanvas').then((m) => m.BackpropCanvas),
     { ssr: false, loading }
   ),
+  '3-4-training-dynamics': dynamic(
+    () => import('./3-4-training-dynamics/TrainingCanvas').then((m) => m.TrainingCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

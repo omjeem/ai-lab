@@ -56,6 +56,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./2-3-gradient-descent/GradientDescentCanvas').then((m) => m.GradientDescentCanvas),
     { ssr: false, loading }
   ),
+  '2-4-overfitting': dynamic(
+    () => import('./2-4-overfitting/OverfitCanvas').then((m) => m.OverfitCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

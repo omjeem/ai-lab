@@ -68,6 +68,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./3-2-layers-forward-pass/LayersCanvas').then((m) => m.LayersCanvas),
     { ssr: false, loading }
   ),
+  '3-3-backpropagation': dynamic(
+    () => import('./3-3-backpropagation/BackpropCanvas').then((m) => m.BackpropCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

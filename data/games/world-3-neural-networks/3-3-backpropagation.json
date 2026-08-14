@@ -46,7 +46,12 @@
         { "threshold": 0.83, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 40
+      "xpReward": 40,
+      "hints": [
+        "The update rule is w ← w − lr·g. Only the *sign* of the gradient decides which way the weight moves — you never need its size for this question.",
+        "Subtracting a negative number pushes the weight up, so a negative gradient means the weight increases. Subtracting a positive number pushes it down, so a positive gradient means it decreases. That rule holds for every edge, regardless of layer.",
+        "Checked against this exact run (seed 13): the layer-2 edge from unit 3 to unit 1 carries a real gradient of −0.0274 — negative, so it increases. Apply the same sign check to whichever edge is highlighted."
+      ]
     },
     {
       "id": "3-3-l2",
@@ -76,7 +81,12 @@
         { "threshold": 0.7, "stars": 2 },
         { "threshold": 0.88, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Ignore the sign entirely — this is ranked by |gradient|, magnitude only. Compare how strongly the backward pass weighted each edge.",
+        "There's no shortcut like \"later layers always carry the biggest gradient\": the real magnitude is a product of downstream weights and activation derivatives multiplied together along the path back to that edge, and which edge wins can flip between rounds. Read the actual sizes rather than guessing from position in the network.",
+        "Checked against this exact run (seed 13), round 1's five edges ranked largest |gradient| first: layer 3 unit 1→1 (0.0433), layer 1 unit 2→2 (0.0086), layer 1 unit 2→4 (0.0038), layer 2 unit 1→4 (0.0033), layer 2 unit 2→2 (0.0003)."
+      ]
     },
     {
       "id": "3-3-l3",
@@ -106,7 +116,12 @@
         { "threshold": 0.15, "stars": 2 },
         { "threshold": 0.3, "stars": 3 }
       ],
-      "xpReward": 60
+      "xpReward": 60,
+      "hints": [
+        "This stack is five weight layers deep, and sigmoid's own derivative never exceeds 0.25 — every layer the backward pass crosses multiplies the signal by something smaller, so it shrinks fast on the way back. Try a different activation.",
+        "A rectifier's derivative is a flat 1 wherever the unit is active, so it doesn't shrink the signal layer over layer the way sigmoid does. Swapping the activation should let far more gradient survive the trip back to the first layer.",
+        "Measured directly on this exact net (seed 31): sigmoid gives a first-layer/last-layer ratio of about 0.001, well under the 0.05 floor. Switching to tanh reaches about 6.48, and relu or leakyRelu land around 0.34 — either clears even the 3-star band (0.3)."
+      ]
     }
   ]
 }

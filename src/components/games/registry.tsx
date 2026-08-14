@@ -48,6 +48,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./2-1-perceptron/PerceptronCanvas').then((m) => m.PerceptronCanvas),
     { ssr: false, loading }
   ),
+  '2-2-loss-functions': dynamic(
+    () => import('./2-2-loss-functions/LossCanvas').then((m) => m.LossCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

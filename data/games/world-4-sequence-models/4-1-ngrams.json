@@ -44,7 +44,12 @@
         { "threshold": 0.6, "stars": 2 },
         { "threshold": 0.8, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "You're not just guessing blind — you're trying to beat, or at least match, what a bigram table already knows about this text from counting alone. Trust your sense of the sentence; the table only ever looks one word back.",
+        "A bigram has no idea what the sentence is about — it just remembers what usually follows the single word right before the blank. After punctuation like a comma or period it tends to reach for whatever's simply most common overall; where the context word is more distinctive, its guess gets sharper.",
+        "Checked against this exact corpus and round set: always picking whichever offered candidate the bigram table itself ranks highest scores 3 of 8 (0.375) — exactly the 1-star line. Its most confident read is the round where the context is a period: it's 29% sure the next token is an opening quote, and it's right."
+      ]
     },
     {
       "id": "4-1-l2",
@@ -72,7 +77,12 @@
         { "threshold": 200, "stars": 2 },
         { "threshold": 187, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Perplexity measures how surprised the table is by held-out text — lower is better — and it needs the order n and the smoothing alpha tuned together, not just one of them.",
+        "Going from unigram to bigram is an easy win here, because a bigram actually uses the preceding word instead of ignoring context entirely. Past that, contexts get so specific that most were never seen in training — climbing to trigrams on this corpus makes perplexity worse, not better, because sparsity starts to dominate over the extra context.",
+        "Checked directly on this corpus: n = 2 with the default alpha (0.1) reaches a perplexity of about 189 — 2 stars, just short of the 187 line. Nudging alpha down to 0.05 at the same n = 2 reaches about 186 — 3 stars. Every n from 3 upward scores worse than n = 2, regardless of alpha."
+      ]
     },
     {
       "id": "4-1-l3",
@@ -101,7 +111,12 @@
         { "threshold": 0.75, "stars": 2 },
         { "threshold": 0.95, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "The wall isn't about how high n can go — it's about the highest n where the table has still actually seen most of the contexts it's tested against. Watch the coverage number, not just the score.",
+        "Coverage collapses fast as n grows: on this corpus, bigram contexts are seen well over 80% of the time, but by four-word contexts coverage drops under 10% — almost every context in the held-out text is one the table simply never counted. Push n past the point where coverage crosses the 0.3 floor and you're being scored on data the table can't generalise to at all.",
+        "Checked directly: on this corpus the highest order that still clears the 0.3 coverage floor is n = 3 (about 34.5% coverage — full credit, 3 stars). n = 2 still works but isn't the highest viable order, so it lands short of full credit; n = 4 and above fall under the floor entirely and score 0."
+      ]
     }
   ]
 }

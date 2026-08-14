@@ -76,6 +76,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./3-4-training-dynamics/TrainingCanvas').then((m) => m.TrainingCanvas),
     { ssr: false, loading }
   ),
+  '4-1-ngrams': dynamic(
+    () => import('./4-1-ngrams/NgramCanvas').then((m) => m.NgramCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

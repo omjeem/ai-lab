@@ -46,7 +46,12 @@
         { "threshold": 0.8, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "Common English words are usually one token each, but leading or repeated whitespace, digits and unusual symbols each tend to cost their own token — count words and count irregularities separately.",
+        "'The quick brown fox' is four ordinary words → four tokens. Long words built from familiar English prefixes and suffixes (like the parts of 'antidisestablishmentarianism') often tokenize into far fewer pieces than their letter count suggests, since GPT-2 has learned those parts as single tokens.",
+        "Real counts: 'The quick brown fox' = 4, 'antidisestablishmentarianism' = 5, '1234567890' = 4, the irregular-spacing string = 6, and the emoji line = 6."
+      ]
     },
     {
       "id": "1-4-l2",
@@ -69,7 +74,12 @@
         { "threshold": 0.85, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Start from single characters and merge the pair that the real tokenizer would merge earliest — common two-letter combinations tend to merge before rarer ones, and the order is fixed by GPT-2's own training, not by what looks intuitive.",
+        "All three words end up as recognisable sub-word chunks — think about which prefix or suffix each word is built from that GPT-2 would already know as its own single token.",
+        "The final pieces are: 'lower' stays as one whole token (no split), 'newest' splits into 'new' + 'est', and 'tokenizer' splits into 'token' + 'izer'."
+      ]
     },
     {
       "id": "1-4-l3",
@@ -94,7 +104,12 @@
         { "threshold": 0.7, "stars": 2 },
         { "threshold": 0.9, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "The tokenizer is efficient at English words it has seen often. It is inefficient at things it has almost never seen as a whole chunk — rare symbols, mixed scripts, and characters typed with no recognisable pattern.",
+        "Random keyboard mashing, uncommon Unicode characters (accented letters outside common European languages, symbols, emoji) and strings that mix scripts or alternate wildly in case tend to fragment into close to one token per character.",
+        "String together unusual symbols, emoji and rare accented or non-Latin characters with no repeating pattern — mixing several different kinds of 'unfamiliar' in one short string reliably drives the tokens-per-character ratio toward its worst case, since the tokenizer has almost no shared sub-word chunks to fall back on."
+      ]
     }
   ]
 }

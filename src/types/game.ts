@@ -57,6 +57,17 @@ export const gameLevelSchema = z.object({
   xpReward: z.number().int().nonnegative(),
   /** Stretch levels that do not gate chapter completion. */
   optional: z.boolean().optional(),
+  /**
+   * Progressive hints, revealed one at a time by `ChapterShell`'s hint panel.
+   * Optional so chapters without a canvas yet can stay silent on it, but every
+   * built chapter should carry 2–3: the first names the approach or direction
+   * to try, the middle one(s) go deeper into why, and the last gives the
+   * concrete answer or a verified worked example — never a vague restatement.
+   * Never computed or fabricated; write these against the level's own real
+   * config and, where the mechanic allows it, verify them by actually running
+   * the engine before shipping.
+   */
+  hints: z.array(z.string().min(1)).min(1).max(6).optional(),
 });
 export type GameLevel = z.infer<typeof gameLevelSchema>;
 

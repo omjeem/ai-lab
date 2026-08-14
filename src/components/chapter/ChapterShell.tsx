@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ArrowLeft, ArrowRight, PanelRightClose, PanelRightOpen, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lightbulb, PanelRightClose, PanelRightOpen, RotateCcw } from 'lucide-react';
 import type { GameDefinition, GameLevel, ScoreResult } from '@/types/game';
 import { nextChapterAfter, worldOfChapter } from '@/lib/curriculum';
 import { useGameProgressStore } from '@/store/useGameProgressStore';
@@ -54,6 +54,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
   const [liveScore, setLiveScore] = useState<ScoreResult | null>(null);
   const [hudOpen, setHudOpen] = useState(false);
   const [chapterDone, setChapterDone] = useState(false);
+  const [hintsRevealed, setHintsRevealed] = useState(0);
 
   const level = game.levels[levelIndex];
   const requiredLevels = useMemo(() => game.levels.filter((l) => !l.optional), [game.levels]);
@@ -62,6 +63,10 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
     beginChapter(game.id);
     if (userId) void enqueueActivity({ userId, type: 'chapter_started', chapterId: game.id });
   }, [game.id, userId, beginChapter]);
+
+  // A new level starts with none of its hints shown. Not tied to `phase`, so a
+  // retry within the same level keeps whatever the player already unlocked.
+  useEffect(() => setHintsRevealed(0), [level?.id]);
 
   const handleSubmit = useCallback(
     (result: ScoreResult) => {
@@ -168,6 +173,10 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
           liveScore={liveScore}
           attempts={attempts}
           phase={phase}
+          hintsRevealed={hintsRevealed}
+          onRevealHint={() =>
+            setHintsRevealed((n) => Math.min(n + 1, level.hints?.length ?? 0))
+          }
           onRetry={() => {
             setLiveScore(null);
             setPhase('playing');
@@ -293,6 +302,8 @@ function Hud({
   liveScore,
   attempts,
   phase,
+  hintsRevealed,
+  onRevealHint,
   onRetry,
   onAdvance,
 }: {
@@ -302,6 +313,8 @@ function Hud({
   liveScore: ScoreResult | null;
   attempts: number;
   phase: string;
+  hintsRevealed: number;
+  onRevealHint: () => void;
   onRetry: () => void;
   onAdvance: () => void;
 }) {
@@ -332,6 +345,10 @@ function Hud({
           </div>
         </div>
       </Panel>
+
+      {level.hints && level.hints.length > 0 && (
+        <HintPanel hints={level.hints} revealed={hintsRevealed} onReveal={onRevealHint} />
+      )}
 
       {liveScore && Object.keys(liveScore.breakdown).length > 0 && (
         <Panel label="breakdown">
@@ -384,6 +401,64 @@ function Hud({
         )}
       </div>
     </div>
+  );
+}
+
+/* ── hints ──────────────────────────────────────────────────── */
+
+/**
+ * Progressive hints, one level's worth at a time.
+ *
+ * Revealed hints stay visible — nothing here re-hides them on a retry or a
+ * score change, since `hintsRevealed` only resets when `ChapterShell` sees a
+ * new `level.id`. The last hint is the level's own worked answer, not another
+ * nudge, so it gets a distinct "answer" tag rather than a hint number.
+ */
+function HintPanel({
+  hints,
+  revealed,
+  onReveal,
+}: {
+  hints: string[];
+  revealed: number;
+  onReveal: () => void;
+}) {
+  const shown = hints.slice(0, revealed);
+  const exhausted = revealed >= hints.length;
+
+  return (
+    <Panel label="hints" actions={<span className="label">{revealed}/{hints.length}</span>}>
+      <div className="flex flex-col gap-3">
+        {shown.length > 0 && (
+          <ol className="flex flex-col gap-2.5">
+            {shown.map((hint, i) => {
+              const isAnswer = i === hints.length - 1;
+              return (
+                <li key={i} className="flex items-start gap-2.5">
+                  {isAnswer ? (
+                    <Tag tone="accent">answer</Tag>
+                  ) : (
+                    <span className="label mt-0.5 shrink-0">{i + 1}</span>
+                  )}
+                  <p className="flex-1 text-xs leading-relaxed text-secondary">{hint}</p>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
+        {!exhausted && (
+          <Button onClick={onReveal}>
+            <Lightbulb size={13} strokeWidth={2} />
+            {revealed === 0
+              ? 'Show a hint'
+              : revealed === hints.length - 1
+                ? 'Reveal the answer'
+                : 'Show another hint'}
+          </Button>
+        )}
+      </div>
+    </Panel>
   );
 }
 

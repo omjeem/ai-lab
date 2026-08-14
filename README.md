@@ -171,6 +171,38 @@ Two things every canvas that hides its answers until submit has to get right:
 download progress, the failure state and retry), drives the engine through `applyAction`, reports the
 live score to the HUD via `onScore`, and submits with `onSubmit`.
 
+### Level hints
+
+Every level should carry a `hints` array in its JSON — this is infrastructure, not per-canvas work.
+`ChapterShell`'s HUD (`src/components/chapter/ChapterShell.tsx`) renders a "hints" panel automatically
+for any level whose config includes one; a canvas needs no code of its own for this to work.
+
+```json
+"hints": [
+  "First hint: names the approach or direction to try, without giving numbers away.",
+  "Middle hint(s): goes deeper into *why* — the mechanism, not just a restatement of the first hint.",
+  "Last hint: the concrete answer — actual numbers, an actual sequence, a verified worked example."
+]
+```
+
+- **2–3 hints is typical; it can vary.** A quiz-style level (pick the right label) may only need one
+  short hint. An open-ended level (tune a learning rate, build an analogy) may want three.
+- **The last hint is a real, checked answer, never a vague nudge.** For engine-scored levels this
+  means actually running the level's config — through the engine directly, or with a throwaway script
+  — and reporting a verified value, not a plausible-sounding guess. Several existing hints (e.g. in
+  `2-1-perceptron`, `2-3-gradient-descent`, `3-2-layers-forward-pass`) exist specifically because the
+  "obvious" answer turned out to be wrong or suboptimal once actually run — see those files' hints for
+  the pattern.
+- **Open-ended levels with no single right answer** (free-text prompts, "bring your own words") still
+  get a concrete last hint: a specific worked example that is verified to pass, framed as "a
+  combination that works," not "the answer."
+- **Never fabricate a number.** If a hint states a threshold, a computed value, or "the model's real
+  top token," it must come from actually running the config — the same standard the rest of this
+  project holds itself to (see "What 'real' means here" below).
+- Schema: `hints` is `z.array(z.string().min(1)).min(1).max(6).optional()` in
+  `src/types/game.ts` — optional so chapters without a canvas yet don't need it, but every level in a
+  built chapter should have one before that chapter is considered done.
+
 ---
 
 ## Keeping levels honest

@@ -56,7 +56,12 @@
         { "threshold": 2, "stars": 2 },
         { "threshold": 3, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "Think about what man → king adds on top of 'man': a notion of royalty. Apply that same shift starting from 'woman' instead.",
+        "The direction from 'man' to 'king' encodes something like '+royalty'. Adding that direction to 'woman' should land you near the female equivalent of a king — and it does, by a wide margin over every other candidate.",
+        "Pick 'queen' — computed live, it comes out clearly closest to king − man + woman, well ahead of the next candidate (throne)."
+      ]
     },
     {
       "id": "1-2-l2",
@@ -94,7 +99,12 @@
         { "threshold": 0.8, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "You need a country → capital direction to add to 'france'. Reusing 'france' itself as one of your three terms is a trap: the result stays dominated by france's own vector and never quite reaches paris.",
+        "Pick a country/capital pair that is NOT France or Paris, subtract the country, and add france — that transplants the 'capital of' direction onto France without France's own vector fighting the result.",
+        "Add 'tokyo', subtract 'japan', add 'france' — computed live, that combination lands closest to 'paris' by a clear margin over every other candidate, including france itself."
+      ]
     },
     {
       "id": "1-2-l3",
@@ -125,7 +135,12 @@
         { "threshold": 0.12, "stars": 2 },
         { "threshold": 0.06, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "walking − walk + swim is a clean word-swap analogy (same grammatical shift applied to a different verb) — those tend to land very close to their target, not just 'somewhat similar'.",
+        "This kind of analogy usually scores a high cosine similarity, well above 0.7 — the swapped verb keeps almost all of the surrounding context intact.",
+        "Estimate around 0.90 — computed live, cos(result, 'swimming') comes out close to 0.90, near the top of the scale."
+      ]
     }
   ]
 }

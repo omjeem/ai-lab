@@ -43,7 +43,12 @@
         { "threshold": 0.01, "stars": 2 },
         { "threshold": 0.002, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "Set almost any learning rate in a reasonable range and press Run repeatedly — this bowl is easy to descend, and you have a full budget of 100 steps to get there.",
+        "Each step multiplies the remaining distance to the minimum by (1 − 2η). Too small an η just means more steps; too large (above η=1) makes it grow instead of shrink. Anywhere comfortably under 1 gets there well inside the step budget.",
+        "η = 0.5 is the exact sweet spot for this particular bowl — it lands exactly on the minimum in a single step, since the curvature here is 2 in both directions and 1/curvature = 0.5."
+      ]
     },
     {
       "id": "2-3-l2",
@@ -71,7 +76,12 @@
         { "threshold": 80, "stars": 2 },
         { "threshold": 50, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Try a working learning rate with momentum at zero first — watch how the steep axis settles quickly while the flat axis barely creeps. That crawl is the whole problem this level is about.",
+        "Without momentum, no learning rate solves this in time: push it high enough to make progress on the flat axis and the steep axis blows up; keep it safe for the steep axis and the flat axis needs hundreds of steps. Momentum breaks that trade-off — it lets the flat axis keep accumulating velocity across steps instead of crawling one small step at a time.",
+        "η around 0.12–0.15 with momentum around 0.8 reliably converges in well under 80 steps — comfortably inside the three-star mark. Momentum genuinely is not optional here."
+      ]
     },
     {
       "id": "2-3-l3",
@@ -103,7 +113,12 @@
         { "threshold": -1.7, "stars": 2 },
         { "threshold": -1.78, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Plain gradient descent just rolls downhill from wherever it starts, and the nearest downhill direction from here leads into the shallow basin, not the deep one. You need something that can push it somewhere gradient descent alone never would.",
+        "Momentum and noise each help a little on their own, but neither reliably escapes from this starting point alone — the shallow basin's pull is strong up close. Push learning rate, momentum AND noise all up together, near their maximums; this is a genuinely sensitive, almost chaotic regime, not a smooth one, so the exact combination matters.",
+        "η = 0.30, momentum = 0.95, noise = 0.50 (this level's noise maximum) reaches the deep basin and lands around −1.85, past the three-star mark. If it doesn't land first try, reset and set the exact same numbers again — the run is fully deterministic, so identical settings always produce the identical result."
+      ]
     },
     {
       "id": "2-3-l4",
@@ -138,7 +153,12 @@
         { "threshold": 0.18, "stars": 3 }
       ],
       "xpReward": 45,
-      "optional": true
+      "optional": true,
+      "hints": [
+        "Treat this like level 1's bowl first — descend with a reasonable learning rate and see how far that alone gets you before reaching for momentum.",
+        "This surface is sliced from a real trained network rather than a clean formula, so it can be lumpier than the earlier bowls — a little momentum smooths out small bumps in the descent the way it did in the ravine.",
+        "This stretch level's surface currently falls back to a flat placeholder until the World 3 network chapter it slices is built, so any position already sits at loss 0 — the moment that surface is wired up for real, treat these hints as a starting point to re-verify, not a guarantee."
+      ]
     }
   ]
 }

@@ -44,7 +44,12 @@
         { "threshold": 0.66, "stars": 1 },
         { "threshold": 0.99, "stars": 3 }
       ],
-      "xpReward": 40
+      "xpReward": 40,
+      "hints": [
+        "Read each prompt as if you had to finish the sentence yourself out loud — the model's top pick is usually the single most natural, unsurprising continuation, not a clever or unusual one.",
+        "These three prompts each have one continuation that's overwhelmingly more common than the alternatives in ordinary English text — a well-known fact, a standard unit, a common verb after 'walked'.",
+        "The model's real top token for each: 'The capital of France is' → ' Paris'; 'Water boils at one hundred degrees' → ' Celsius'; 'She opened the door and walked' → ' into'."
+      ]
     },
     {
       "id": "1-5-l2",
@@ -72,7 +77,12 @@
         { "threshold": 0.18, "stars": 2 },
         { "threshold": 0.1, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Don't spread your 100 points evenly — real next-token distributions are lopsided. Put most of your budget on whichever one or two tokens feel most natural, and only a little on the rest.",
+        "For 'the best thing about summer is the', several everyday nouns are all plausible and the model's real distribution is fairly spread across the top few. For 'In order to fix the bug, first', one token (a comma, since the sentence naturally pauses there) dominates far more than the others.",
+        "Roughly: 'summer' prompt — time ~24%, way ~24%, opportunity ~19%, weather ~14%, warm ~11%, sunshine ~8% (fairly flat). 'Fix the bug' prompt — the comma alone is close to 60%, with 'we' a distant second around 20% and the rest small (sharply peaked)."
+      ]
     },
     {
       "id": "1-5-l3",
@@ -98,7 +108,12 @@
         { "threshold": 0.8, "stars": 2 },
         { "threshold": 0.45, "stars": 3 }
       ],
-      "xpReward": 60
+      "xpReward": 60,
+      "hints": [
+        "Entropy measures spread, not correctness: a prompt with one obvious continuation has low entropy (sharp, confident), while a prompt that could naturally go many directions has high entropy (flat, uncertain).",
+        "A prompt that finishes a well-known phrase, fact or fixed expression tends to score low (under 2 bits). A prompt that trails off in a way many different words could follow — an adjective, a vague setup, an open-ended question — tends to score higher, closer to the top of the scale.",
+        "There's no single number since it depends on your own prompt — but as a calibration anchor, ordinary open-ended prompts on this model tend to land around 1.5–3 bits out of a ceiling near log₂(topK); a genuinely 'obvious next word' prompt scores noticeably lower than that, and a genuinely wide-open one scores noticeably higher."
+      ]
     }
   ]
 }

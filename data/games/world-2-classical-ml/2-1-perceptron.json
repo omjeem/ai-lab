@@ -45,7 +45,12 @@
         { "threshold": 0.98, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 40
+      "xpReward": 40,
+      "hints": [
+        "Watch the weight vector — the line only rotates when the perceptron misclassifies the sample currently under the cursor ring. Step through and see which samples trigger a move.",
+        "These starting weights already point close to a working boundary, so accuracy begins right at the pass line before you've done anything. It shouldn't take many updates once you start stepping.",
+        "Just keep pressing Step (or use ×10) — from these starting weights, a single weight update is enough to reach 100% accuracy."
+      ]
     },
     {
       "id": "2-1-l2",
@@ -74,7 +79,12 @@
         { "threshold": 150, "stars": 2 },
         { "threshold": 80, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "The learning rate scales how far each correction moves the boundary — but this run starts at exactly zero weights. Think about what that means for the very first few updates.",
+        "When weights start at zero, the sign of every 'is this point right or wrong' test scales uniformly with the learning rate — which means the sequence of right/wrong decisions the perceptron makes turns out to be exactly the same no matter what η you pick, as long as it's positive.",
+        "Set the learning rate to anything reasonable and just run — from a zero start, this dataset converges in exactly 41 updates regardless of η, comfortably inside the 80-update mark for three stars."
+      ]
     },
     {
       "id": "2-1-l3",
@@ -104,7 +114,12 @@
         { "threshold": 0.6, "stars": 2 },
         { "threshold": 0.68, "stars": 3 }
       ],
-      "xpReward": 55
+      "xpReward": 55,
+      "hints": [
+        "No amount of stepping through training will separate XOR with a single straight line — that's the whole point of this level. You have to place the boundary by hand with the weight sliders.",
+        "A single line can't cleanly split XOR's four quadrants, but it can sacrifice one quadrant and get the other three right — that's the best any straight boundary can do here. Try angling the line diagonally rather than along an axis.",
+        "Set w0 ≈ 0.12, w1 ≈ −0.10, bias ≈ 0.08 (any scaled version of that same direction and ratio works too, e.g. w0=0.96, w1=−0.80, bias=0.64) — that reaches about 0.77 accuracy, comfortably past three stars."
+      ]
     }
   ]
 }

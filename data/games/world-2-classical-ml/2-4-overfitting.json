@@ -46,7 +46,12 @@
         { "threshold": 0.1, "stars": 2 },
         { "threshold": 0.08, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "Start at degree 1 and slowly raise it — training loss will keep falling the whole way, but validation loss will fall for a while and then start climbing back up. The turning point is your answer, not the degree with the lowest training loss.",
+        "This data was generated from a genuine cubic curve. Once the degree can express a cubic, more capacity stops helping and starts hunting for patterns in the noise instead.",
+        "Degree 3 is the turning point — validation loss bottoms out there around 0.044, comfortably past three stars. Degrees 4–6 are still fine (~0.07); by degree 7 it's already overfitting."
+      ]
     },
     {
       "id": "2-4-l2",
@@ -75,7 +80,12 @@
         { "threshold": 0.11, "stars": 2 },
         { "threshold": 0.085, "stars": 3 }
       ],
-      "xpReward": 40
+      "xpReward": 40,
+      "hints": [
+        "Degree is locked at 12 — far more flexible than this data needs — so at λ=0 it memorises the noise. Raise λ and watch validation loss fall even as training loss rises.",
+        "There's a wide range of λ that works here, not one exact value. Push it up past roughly 0.5 and validation loss keeps improving, well past the point where training loss starts looking 'worse' on its own.",
+        "λ ≈ 1.0 brings validation loss down to about 0.061, safely inside three stars — degree 12 does not need to be dialed back, only made expensive to use carelessly."
+      ]
     },
     {
       "id": "2-4-l3",
@@ -105,7 +115,12 @@
         { "threshold": 0.12, "stars": 2 },
         { "threshold": 0.06, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "You have two dials now — degree and λ — and the goal is a small gap, not just a small validation loss on its own. A flat, useless line also has a 'small gap' in a hollow sense, which is exactly what this level's validation-loss ceiling exists to rule out.",
+        "This data comes from a sine curve, and the sample here is smaller and noisier than the last level's. A moderate degree flexible enough to bend like a sine, with a modest ridge penalty to keep it honest, closes the gap without flattening the fit into uselessness.",
+        "Degree 3 with λ = 0 already gets you there — gap of about 0.02, comfortably inside three stars, with validation loss (~0.054) nowhere near the 0.1 ceiling. Degree 6 with λ around 0.3–0.5 works just as well if you want more flexibility with some insurance against it."
+      ]
     }
   ]
 }

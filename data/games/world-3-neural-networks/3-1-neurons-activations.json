@@ -48,7 +48,12 @@
         { "threshold": 0.93, "stars": 2 },
         { "threshold": 0.98, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "This uses the exact same activation as the target neuron, so there's a direct, findable answer rather than an approximate one — move one weight at a time and watch which one straightens out the shape of your curve to match the target's.",
+        "Get the general shape right before fine-tuning exact values: which weight controls how strongly the curve responds to the first input, which to the second, and how the bias shifts the whole thing up or down.",
+        "w0 = 1.5, w1 = −0.8, bias = 0.4 reproduces the target exactly — those are literally the weights the target curve was generated from."
+      ]
     },
     {
       "id": "3-1-l2",
@@ -79,7 +84,12 @@
         { "threshold": 0.8, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Check the output range first: sigmoid stays between 0 and 1, tanh stays between −1 and 1, and ReLU, leaky ReLU and GELU can all go arbitrarily positive. That alone eliminates two or three candidates immediately.",
+        "Among the unbounded ones: plain ReLU is exactly flat at zero for every negative input, leaky ReLU has a small but nonzero negative slope instead of flat, and GELU dips slightly below zero just before the origin before curving up — it's the only one of the three that isn't monotonic near zero.",
+        "Check in order: stays in [0,1] → sigmoid. Stays in [−1,1] → tanh. Flat at exactly zero for negatives → ReLU. Small negative slope instead of flat → leaky ReLU. Dips slightly below zero near the origin before rising → GELU."
+      ]
     },
     {
       "id": "3-1-l3",
@@ -109,7 +119,12 @@
         { "threshold": 0.5, "stars": 2 },
         { "threshold": 0.62, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Nothing here is wrong about the weights' direction — the neuron's sum is just permanently negative because of how negative the bias is. Try adjusting the bias before touching the weights at all.",
+        "The probes span roughly ±2 on each input, so the weighted part of the sum only ever swings a modest amount either way — a bias of −2.9 overwhelms that completely, so every probe reads negative. Bring the bias up toward positive territory.",
+        "Raise the bias alone, leaving the weights untouched — bias = 0 already revives about 56% of probes (past two stars), and bias ≈ 1 wakes every single one of them (three stars)."
+      ]
     }
   ]
 }

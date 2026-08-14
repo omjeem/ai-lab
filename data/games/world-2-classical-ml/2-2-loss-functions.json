@@ -50,7 +50,12 @@
         { "threshold": 0.25, "stars": 2 },
         { "threshold": 0.1, "stars": 3 }
       ],
-      "xpReward": 30
+      "xpReward": 30,
+      "hints": [
+        "Look at how much y grows each time x increases by 1 — that growth rate is your slope. Then check where the line should sit when x=0 for your intercept.",
+        "From x=0 to x=4, y climbs from about 1.1 to about 9.1 — roughly 2 units of y per 1 unit of x. That puts the intercept, the value at x=0, close to 1.",
+        "Slope ≈ 2.0, intercept ≈ 1.0 (precisely, about 1.99 and 1.04) — that's the true least-squares fit and lands in three-star range."
+      ]
     },
     {
       "id": "2-2-l2",
@@ -84,7 +89,12 @@
         { "threshold": 2.15, "stars": 2 },
         { "threshold": 2.02, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "Four of the five points sit exactly on a clean line — find that line first, then decide how much the fifth (outlier) point should be allowed to pull it.",
+        "Under absolute error, one huge miss costs proportionally the same per unit as several small misses — it doesn't get squared into dominance. That means the line barely needs to move to accommodate the outlier at all.",
+        "Slope = 1, intercept = 1 (the exact line through the four normal points) gives MAE = 2.0, comfortably inside three stars — the outlier's own error is large (10) but MAE only counts it linearly, not quadratically."
+      ]
     },
     {
       "id": "2-2-l3",
@@ -127,7 +137,12 @@
         { "threshold": 0.75, "stars": 1 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Ask what each scenario actually punishes: does it care about outliers proportionally, quadratically, about calibrated confidence, or only about examples near a decision boundary?",
+        "Mansions skewing house prices badly is a call for a loss that doesn't overreact to big misses. Needing calibrated probabilities points to the loss built for probabilities. 'Only care about examples near the boundary' names a loss by its own definition.",
+        "House prices with outliers → MAE. Calibrated spam probabilities → cross-entropy. Margin-based, boundary-only → hinge. Every-error-matters-squared temperature forecasting → MSE."
+      ]
     }
   ]
 }

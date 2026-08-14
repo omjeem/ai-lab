@@ -49,7 +49,12 @@
         { "threshold": 0.95, "stars": 2 },
         { "threshold": 0.98, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "One straight line can never separate a ring from what's inside it — you need at least one hidden layer before training will make any real progress.",
+        "The default architecture (one hidden layer of 4 units) already has enough capacity for two concentric circles; a higher learning rate just gets you there in fewer epochs.",
+        "Leave the architecture at its default (2–4–1), set η ≈ 0.3, and train for around 150 epochs — that reaches 100% validation accuracy."
+      ]
     },
     {
       "id": "3-2-l2",
@@ -82,7 +87,12 @@
         { "threshold": 0.75, "stars": 2 },
         { "threshold": 0.88, "stars": 3 }
       ],
-      "xpReward": 55
+      "xpReward": 55,
+      "hints": [
+        "This is scored per parameter, so before adding units, ask whether XOR actually needs two hidden layers at all — it doesn't need much.",
+        "A single hidden layer is enough to solve XOR; the real question is how few units in that one layer still learn it reliably. Fewer parameters at the same accuracy scores strictly better here.",
+        "One hidden layer of 3 or 4 units (architecture 2–3–1 or 2–4–1, about 13–17 parameters) trains to roughly 91% accuracy and clears three stars — beating the default two-hidden-layer setup on efficiency even though raw accuracy is similar."
+      ]
     },
     {
       "id": "3-2-l3",
@@ -116,7 +126,12 @@
         { "threshold": 0.93, "stars": 2 },
         { "threshold": 0.97, "stars": 3 }
       ],
-      "xpReward": 60
+      "xpReward": 60,
+      "hints": [
+        "Try the default architecture and just train for a while first — watch whether accuracy is actually climbing or stuck. If it's stuck near 50%, the problem probably isn't the architecture or the epoch budget.",
+        "tanh saturates on a network this deep for this dataset — the gradient signal struggles to get back through two hidden tanh layers, so it stalls around 53% accuracy no matter how long you train or what learning rate you pick. Switch the activation instead of fighting it with more epochs.",
+        "Keep the default architecture (two hidden layers, 8 units each) but switch the activation to ReLU or leaky ReLU, use η ≈ 0.08, and train the full 900 epochs — that combination reaches essentially 100% accuracy, comfortably past three stars."
+      ]
     }
   ]
 }

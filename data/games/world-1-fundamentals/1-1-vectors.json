@@ -42,7 +42,12 @@
         { "threshold": 0.72, "stars": 2 },
         { "threshold": 0.88, "stars": 3 }
       ],
-      "xpReward": 30
+      "xpReward": 30,
+      "hints": [
+        "Ignore what the words mean to you personally and think about what kind of thing each one is — the model groups by how words get used, not by a dictionary definition. There are two natural groups hiding in this list.",
+        "Cat, dog and hamster are animals; truck, bus and bicycle are vehicles. Put the three animal words in one region of the canvas and the three vehicle words in a clearly separate region.",
+        "Drag cat, dog and hamster into a tight cluster on one side, and truck, bus and bicycle into a tight cluster on the other side, with real empty space between the two groups. The exact coordinates don't matter, only that the two groups are visibly separated."
+      ]
     },
     {
       "id": "1-1-l2",
@@ -77,7 +82,12 @@
         { "threshold": 0.66, "stars": 1 },
         { "threshold": 0.99, "stars": 3 }
       ],
-      "xpReward": 40
+      "xpReward": 40,
+      "hints": [
+        "The three groups are already sitting at their real positions — you just need to name each one. Look at which points cluster near each other rather than reading the word list in order.",
+        "Violin, trumpet and cello are instruments; hydrogen, oxygen and nitrogen are elements; lasagna, risotto and paella are food — the model clusters them by real-world category even though it was never told about categories.",
+        "Assign 'instruments' to the violin/trumpet/cello cluster, 'elements' to the hydrogen/oxygen/nitrogen cluster, and 'food' to the lasagna/risotto/paella cluster."
+      ]
     },
     {
       "id": "1-1-l3",
@@ -104,7 +114,12 @@
         { "threshold": 0.7, "stars": 2 },
         { "threshold": 0.85, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Every sentence-embedding model normalises its output to roughly the same length, so most words land in a fairly narrow magnitude band — don't guess wildly high or low regardless of the word.",
+        "This chapter's embedder outputs unit-length vectors, so almost every word's true magnitude sits extremely close to 1.0 — the word you type barely changes it.",
+        "Set the slider to 1.0 for any word — this embedder normalises every vector to unit length, so magnitude ≈ 1.0 is correct essentially regardless of what you typed."
+      ]
     }
   ]
 }

@@ -60,6 +60,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./2-4-overfitting/OverfitCanvas').then((m) => m.OverfitCanvas),
     { ssr: false, loading }
   ),
+  '3-1-neurons-activations': dynamic(
+    () => import('./3-1-neurons-activations/NeuronCanvas').then((m) => m.NeuronCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

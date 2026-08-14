@@ -64,6 +64,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./3-1-neurons-activations/NeuronCanvas').then((m) => m.NeuronCanvas),
     { ssr: false, loading }
   ),
+  '3-2-layers-forward-pass': dynamic(
+    () => import('./3-2-layers-forward-pass/LayersCanvas').then((m) => m.LayersCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

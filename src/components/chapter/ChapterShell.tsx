@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ArrowLeft, ArrowRight, Lightbulb, PanelRightClose, PanelRightOpen, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lightbulb, RotateCcw } from 'lucide-react';
 import type { GameDefinition, GameLevel, ScoreResult } from '@/types/game';
 import { nextChapterAfter, worldOfChapter } from '@/lib/curriculum';
 import { useGameProgressStore } from '@/store/useGameProgressStore';
@@ -52,7 +52,6 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
   const recordResult = useSessionStore((s) => s.recordResult);
 
   const [liveScore, setLiveScore] = useState<ScoreResult | null>(null);
-  const [hudOpen, setHudOpen] = useState(false);
   const [chapterDone, setChapterDone] = useState(false);
   const [hintsRevealed, setHintsRevealed] = useState(0);
 
@@ -145,8 +144,6 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
           levelIndex={levelIndex}
           totalLevels={game.levels.length}
           worldNumber={world?.world ?? game.world}
-          onToggleHud={() => setHudOpen((open) => !open)}
-          hudOpen={hudOpen}
         />
 
         <div className="relative flex min-h-0 flex-1 flex-col">
@@ -158,12 +155,12 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
         </div>
       </div>
 
-      {/* ── HUD: sheet on mobile, rail from lg up ── */}
+      {/* ── HUD: below the canvas on mobile, a persistent rail from lg up.
+          Always rendered — there is no toggle to find the score or hints. ── */}
       <aside
         className={cx(
-          'border-line bg-panel/40',
-          'lg:flex lg:min-h-0 lg:w-[320px] lg:shrink-0 lg:flex-col lg:border-l',
-          hudOpen ? 'flex flex-col border-t' : 'hidden lg:flex'
+          'flex flex-col border-t border-line bg-panel/40',
+          'lg:min-h-0 lg:w-[320px] lg:shrink-0 lg:border-l lg:border-t-0'
         )}
       >
         <Hud
@@ -211,16 +208,12 @@ function ChapterBar({
   levelIndex,
   totalLevels,
   worldNumber,
-  onToggleHud,
-  hudOpen,
 }: {
   game: GameDefinition;
   level: GameLevel;
   levelIndex: number;
   totalLevels: number;
   worldNumber: number;
-  onToggleHud: () => void;
-  hudOpen: boolean;
 }) {
   return (
     <div className="flex items-center gap-3 border-b border-line px-3 py-2">
@@ -243,15 +236,6 @@ function ChapterBar({
       <span className="label whitespace-nowrap">
         {levelIndex + 1}/{totalLevels} · {level.difficulty}
       </span>
-
-      <button
-        type="button"
-        onClick={onToggleHud}
-        aria-label={hudOpen ? 'Hide controls' : 'Show controls'}
-        className="p-1 text-muted transition-colors hover:text-primary lg:hidden"
-      >
-        {hudOpen ? <PanelRightClose size={15} strokeWidth={1.75} /> : <PanelRightOpen size={15} strokeWidth={1.75} />}
-      </button>
     </div>
   );
 }

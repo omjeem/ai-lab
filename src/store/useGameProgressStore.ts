@@ -47,7 +47,8 @@ interface GameProgressState {
   recordLevel: (chapterId: string, result: LevelResult) => void;
   completeChapter: (chapterId: string, stars: number) => void;
   setSoundEnabled: (enabled: boolean) => void;
-  reset: () => void;
+  /** Wipes identity and progress, returning this device to a first-visit state. */
+  clearAllData: () => void;
   markHydrated: () => void;
 
   completionRecord: () => CompletionRecord;
@@ -143,7 +144,14 @@ export const useGameProgressStore = create<GameProgressState>()(
 
       setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
 
-      reset: () => set({ xp: 0, chapters: {} }),
+      clearAllData: () =>
+        set({
+          userId: null,
+          displayName: null,
+          xp: 0,
+          chapters: {},
+          soundEnabled: false,
+        }),
 
       markHydrated: () => set({ hydrated: true }),
 

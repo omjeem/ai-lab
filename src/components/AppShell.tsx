@@ -10,9 +10,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Cpu, Wifi, WifiOff, Volume2, VolumeX } from 'lucide-react';
+import { Cpu, Trash2, Wifi, WifiOff, Volume2, VolumeX } from 'lucide-react';
 import { detectCapabilities, type DeviceCapabilities } from '@/lib/deviceCapabilities';
 import { startSyncManager } from '@/lib/syncManager';
+import { clearQueue } from '@/lib/offlineQueue';
 import { useGameProgressStore } from '@/store/useGameProgressStore';
 import { cx, Tag } from '@/components/ui';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -68,6 +69,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             {online ? <Wifi size={14} strokeWidth={1.75} /> : <WifiOff size={14} strokeWidth={1.75} />}
             <span className="label hidden sm:inline">{online ? 'online' : 'offline'}</span>
           </span>
+
+          <ClearDataButton />
         </div>
       </header>
 
@@ -98,5 +101,47 @@ function BackendIndicator({ capabilities }: { capabilities: DeviceCapabilities |
         {capabilities.backend}
       </Tag>
     </span>
+  );
+}
+
+/**
+ * Lets a logged-in player wipe this device's copy of their progress.
+ *
+ * Nothing here reaches the server — it only clears what is stored locally
+ * (IndexedDB progress + the offline activity queue), so it is exactly as
+ * destructive as uninstalling and reinstalling on this browser, no more.
+ */
+function ClearDataButton() {
+  const userId = useGameProgressStore((s) => s.userId);
+  const clearAllData = useGameProgressStore((s) => s.clearAllData);
+
+  if (!userId) return null;
+
+  const handleClick = async () => {
+    const confirmed = window.confirm(
+      'Clear all your data on this device? This permanently deletes your progress, rank and ' +
+        'identity here — it cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    await clearQueue();
+    clearAllData();
+    // A hard reload rather than router.push: pages like /map hold their own
+    // "no userId, go to onboarding" redirect, and racing that against a
+    // client-side navigation here is exactly the kind of thing that only
+    // sometimes lands where intended. A fresh load never has that race.
+    window.location.href = '/';
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label="Clear my data"
+      title="Clear my data — erases progress from this device"
+      className="p-1.5 text-muted transition-colors hover:text-bad"
+    >
+      <Trash2 size={14} strokeWidth={1.75} />
+    </button>
   );
 }

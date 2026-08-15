@@ -8,7 +8,7 @@
  * tablet up. The shell owns the concept panel, level progression, scoring and
  * the aha reveal; the game component owns only its own canvas and controls.
  */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ArrowLeft, ArrowRight, Lightbulb, PanelRightClose, PanelRightOpen, RotateCcw } from 'lucide-react';
@@ -162,7 +162,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
       <aside
         className={cx(
           'border-line bg-panel/40',
-          'lg:flex lg:w-[320px] lg:shrink-0 lg:flex-col lg:border-l',
+          'lg:flex lg:min-h-0 lg:w-[320px] lg:shrink-0 lg:flex-col lg:border-l',
           hudOpen ? 'flex flex-col border-t' : 'hidden lg:flex'
         )}
       >
@@ -413,6 +413,10 @@ function Hud({
  * score change, since `hintsRevealed` only resets when `ChapterShell` sees a
  * new `level.id`. The last hint is the level's own worked answer, not another
  * nudge, so it gets a distinct "answer" tag rather than a hint number.
+ *
+ * The list has a fixed max height and scrolls internally past that, rather
+ * than growing — revealing hints one after another used to push the whole
+ * HUD (and with it the canvas beside it) further down the page every click.
  */
 function HintPanel({
   hints,
@@ -425,12 +429,23 @@ function HintPanel({
 }) {
   const shown = hints.slice(0, revealed);
   const exhausted = revealed >= hints.length;
+  const listRef = useRef<HTMLOListElement>(null);
+
+  // A freshly-revealed hint should be the thing you see, not something you
+  // have to go find below the fold of the box that just capped its height.
+  useEffect(() => {
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [revealed]);
 
   return (
     <Panel label="hints" actions={<span className="label">{revealed}/{hints.length}</span>}>
       <div className="flex flex-col gap-3">
         {shown.length > 0 && (
-          <ol className="flex flex-col gap-2.5">
+          <ol
+            ref={listRef}
+            className="flex max-h-64 flex-col gap-2.5 overflow-y-auto pr-1"
+          >
             {shown.map((hint, i) => {
               const isAnswer = i === hints.length - 1;
               return (

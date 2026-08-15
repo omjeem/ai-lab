@@ -139,8 +139,15 @@ function Board({
           A flex container here, not a plain block — `height: 100%` on the
           surface below never resolved against this div's own flex-computed
           height, since that height isn't "explicit" in the way percentage
-          heights require. `flex-1` on the surface avoids that entirely. */}
-      <div className="relative flex min-h-0 flex-1 flex-col p-3">
+          heights require. `flex-1` on the surface avoids that entirely.
+
+          `min-h-60` (240px) is a real floor, not decoration: this div's
+          flex-basis is 0%, so in a level whose controls below it are tall
+          (guess-the-label's per-word buttons, one row per word) it is the
+          first thing flexbox sacrifices — without a floor it had been
+          measured shrinking to under 60px, no longer a usable drop target,
+          while the controls below rendered at their full natural height. */}
+      <div className="relative flex min-h-60 flex-1 flex-col p-3">
         <div
           ref={surfaceRef}
           className="grid-field relative min-h-0 w-full flex-1 border border-line bg-inset"

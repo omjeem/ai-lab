@@ -177,8 +177,13 @@ function Board({
         </div>
       </div>
 
-      {/* Controls sit under the instrument as a secondary layer. */}
-      <div className="flex flex-col gap-2 border-t border-line p-3">
+      {/* Controls sit under the instrument as a secondary layer.
+          Extra horizontal padding, not just p-3's usual 12px: a chip that
+          ends up flush against the screen edge on a narrow phone has its
+          drag start inside iOS Safari's edge-swipe-back gesture zone, which
+          wins over touch-action: none there — that gesture is recognised
+          before the touch ever reaches page JS. */}
+      <div className="flex flex-col gap-2 border-t border-line px-5 py-3">
         {unplaced.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {unplaced.map((item) => (

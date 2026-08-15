@@ -13,7 +13,7 @@
  * Nothing here holds an answer key. The true ranking, the outlier and the
  * disagreements all come from the engine, which derives them from live vectors.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowDown, ArrowUp, Check, GripVertical, Plus, RotateCcw, X } from 'lucide-react';
 import {
@@ -37,6 +37,8 @@ import {
 import { ModelGate } from '@/components/ui/ModelGate';
 import { Button, Panel, Tag, cx } from '@/components/ui';
 import { useRetrySignal } from '../useRetrySignal';
+import { usePointerDrag } from '../usePointerDrag';
+import { useDragReorder } from '../useDragReorder';
 import type { GameComponentProps } from '../registry';
 import type { EngineRules } from '@/types/game';
 
@@ -162,7 +164,7 @@ function RankBoard({
   revealed: boolean;
 }) {
   const anchor = state.config.anchor ?? '';
-  const dragging = useRef<number | null>(null);
+  const reorder = useDragReorder((from, to) => dispatch({ type: 'MOVE_ITEM', from, to }));
 
   const truePosition = useMemo(
     () => new Map(state.trueOrder.map((word, i) => [word, i])),
@@ -189,70 +191,29 @@ function RankBoard({
             const offBy = revealed ? index - actual : 0;
 
             return (
-              <li
+              <RankRow
                 key={word}
-                draggable={!revealed}
-                onDragStart={() => (dragging.current = index)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const from = dragging.current;
-                  dragging.current = null;
-                  if (from !== null && from !== index) {
-                    dispatch({ type: 'MOVE_ITEM', from, to: index });
-                  }
-                }}
-                className={cx(
-                  'flex items-center gap-3 border px-2 py-2',
-                  revealed && offBy === 0
-                    ? 'border-good/40 bg-good/5'
-                    : revealed
-                      ? 'border-line bg-raised'
-                      : 'border-line-strong bg-raised'
-                )}
-                style={{ borderRadius: 'var(--radius)' }}
-              >
-                <span className="readout w-5 shrink-0 text-xs text-muted">{index + 1}</span>
-
-                {!revealed && (
-                  <span className="text-muted" aria-hidden>
-                    <GripVertical size={13} strokeWidth={1.75} />
-                  </span>
-                )}
-
-                <span className="min-w-0 flex-1 truncate font-mono text-sm text-primary">
-                  {word}
-                </span>
-
-                {revealed ? (
-                  <RevealedRank
-                    word={word}
-                    anchor={anchor}
-                    vectors={state.vectors}
-                    actualPosition={actual}
-                    offBy={offBy}
-                  />
-                ) : (
-                  /* Dragging is the fast path; these are the whole path on a
-                     keyboard, per Section 11.5. */
-                  <span className="flex shrink-0 items-center gap-1">
-                    <MoveButton
-                      label={`Move ${word} up`}
-                      disabled={index === 0}
-                      onClick={() => dispatch({ type: 'MOVE_ITEM', from: index, to: index - 1 })}
-                    >
-                      <ArrowUp size={12} strokeWidth={2} />
-                    </MoveButton>
-                    <MoveButton
-                      label={`Move ${word} down`}
-                      disabled={index === state.ordering.length - 1}
-                      onClick={() => dispatch({ type: 'MOVE_ITEM', from: index, to: index + 1 })}
-                    >
-                      <ArrowDown size={12} strokeWidth={2} />
-                    </MoveButton>
-                  </span>
-                )}
-              </li>
+                word={word}
+                index={index}
+                revealed={revealed}
+                offBy={offBy}
+                actual={actual}
+                anchor={anchor}
+                vectors={state.vectors}
+                totalItems={state.ordering.length}
+                dragging={reorder.dragIndex === index}
+                dropTarget={
+                  reorder.overIndex === index &&
+                  reorder.dragIndex !== null &&
+                  reorder.dragIndex !== index
+                }
+                registerRef={reorder.registerItem(index)}
+                onGripDragStart={() => reorder.startDrag(index)}
+                onGripDragMove={reorder.dragTo}
+                onGripDragEnd={reorder.dropAt}
+                onMoveUp={() => dispatch({ type: 'MOVE_ITEM', from: index, to: index - 1 })}
+                onMoveDown={() => dispatch({ type: 'MOVE_ITEM', from: index, to: index + 1 })}
+              />
             );
           })}
         </ol>
@@ -268,6 +229,108 @@ function RankBoard({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * One row of the ranking list.
+ *
+ * The grip glyph, not the whole row, is the drag target — the row also holds
+ * the up/down buttons, and capturing the pointer at the row would swallow
+ * their clicks too.
+ */
+function RankRow({
+  word,
+  index,
+  revealed,
+  offBy,
+  actual,
+  anchor,
+  vectors,
+  totalItems,
+  dragging,
+  dropTarget,
+  registerRef,
+  onGripDragStart,
+  onGripDragMove,
+  onGripDragEnd,
+  onMoveUp,
+  onMoveDown,
+}: {
+  word: string;
+  index: number;
+  revealed: boolean;
+  offBy: number;
+  actual: number;
+  anchor: string;
+  vectors: Record<string, number[]>;
+  totalItems: number;
+  dragging: boolean;
+  dropTarget: boolean;
+  registerRef: (element: HTMLElement | null) => void;
+  onGripDragStart: () => void;
+  onGripDragMove: (clientY: number) => void;
+  onGripDragEnd: (clientY: number) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const grip = usePointerDrag({
+    onDragStart: onGripDragStart,
+    onDragMove: (_x, y) => onGripDragMove(y),
+    onDragEnd: (_x, y) => onGripDragEnd(y),
+    threshold: 6,
+  });
+
+  return (
+    <li
+      ref={registerRef}
+      className={cx(
+        'flex items-center gap-3 border px-2 py-2 transition-opacity',
+        dragging && 'opacity-40',
+        dropTarget && 'border-accent',
+        revealed && offBy === 0
+          ? 'border-good/40 bg-good/5'
+          : revealed
+            ? 'border-line bg-raised'
+            : 'border-line-strong bg-raised'
+      )}
+      style={{ borderRadius: 'var(--radius)' }}
+    >
+      <span className="readout w-5 shrink-0 text-xs text-muted">{index + 1}</span>
+
+      {!revealed && (
+        <span {...grip} style={{ ...grip.style, cursor: 'grab' }} className="text-muted active:cursor-grabbing">
+          <GripVertical size={13} strokeWidth={1.75} aria-hidden />
+        </span>
+      )}
+
+      <span className="min-w-0 flex-1 truncate font-mono text-sm text-primary">{word}</span>
+
+      {revealed ? (
+        <RevealedRank
+          word={word}
+          anchor={anchor}
+          vectors={vectors}
+          actualPosition={actual}
+          offBy={offBy}
+        />
+      ) : (
+        /* Dragging is the fast path; these are the whole path on a
+           keyboard, per Section 11.5. */
+        <span className="flex shrink-0 items-center gap-1">
+          <MoveButton label={`Move ${word} up`} disabled={index === 0} onClick={onMoveUp}>
+            <ArrowUp size={12} strokeWidth={2} />
+          </MoveButton>
+          <MoveButton
+            label={`Move ${word} down`}
+            disabled={index === totalItems - 1}
+            onClick={onMoveDown}
+          >
+            <ArrowDown size={12} strokeWidth={2} />
+          </MoveButton>
+        </span>
+      )}
+    </li>
   );
 }
 

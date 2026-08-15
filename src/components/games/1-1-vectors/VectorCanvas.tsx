@@ -25,6 +25,7 @@ import {
 import { embeddingModel, EMBEDDING_MODEL_ID } from '@/models/embeddingModel';
 import { ModelGate } from '@/components/ui/ModelGate';
 import { Button, Panel, Slider, cx } from '@/components/ui';
+import { usePointerDrag } from '../usePointerDrag';
 import type { GameComponentProps } from '../registry';
 import type { EngineRules } from '@/types/game';
 
@@ -86,6 +87,9 @@ function Board({
   const [selected, setSelected] = useState<string | null>(null);
   const [newWord, setNewWord] = useState('');
   const [busy, setBusy] = useState(false);
+  const [ghost, setGhost] = useState<{ id: string; word: string; x: number; y: number } | null>(
+    null
+  );
 
   // The HUD tracks the score live, so every placement updates it.
   useEffect(() => onScore(evaluate(state)), [state, onScore]);
@@ -131,18 +135,16 @@ function Board({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* The plot is the dominant element, not a chart inside a card. */}
-      <div className="relative min-h-0 flex-1 p-3">
+      {/* The plot is the dominant element, not a chart inside a card.
+          A flex container here, not a plain block — `height: 100%` on the
+          surface below never resolved against this div's own flex-computed
+          height, since that height isn't "explicit" in the way percentage
+          heights require. `flex-1` on the surface avoids that entirely. */}
+      <div className="relative flex min-h-0 flex-1 flex-col p-3">
         <div
           ref={surfaceRef}
-          className="grid-field relative h-full w-full border border-line bg-inset"
+          className="grid-field relative min-h-0 w-full flex-1 border border-line bg-inset"
           style={{ borderRadius: 'var(--radius)' }}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            const id = event.dataTransfer.getData('text/plain');
-            if (id) pointerPlace(id, event.clientX, event.clientY);
-          }}
         >
           {state.items
             .filter((item) => item.placedX !== null)
@@ -154,9 +156,18 @@ function Board({
                 selected={selected === item.id}
                 onSelect={() => setSelected(selected === item.id ? null : item.id)}
                 onNudge={(dx, dy) => nudge(item, dx, dy)}
-                onDragEnd={(x, y) => pointerPlace(item.id, x, y)}
+                onMove={(x, y) => pointerPlace(item.id, x, y)}
               />
             ))}
+
+          {ghost && (
+            <div
+              className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 border border-accent bg-accent-dim px-2 py-1 font-mono text-[11px] leading-none text-primary"
+              style={{ left: ghost.x, top: ghost.y, borderRadius: 'var(--radius)' }}
+            >
+              {ghost.word}
+            </div>
+          )}
 
           {state.items.length > 0 && unplaced.length === state.items.length && (
             <p className="absolute inset-0 flex items-center justify-center text-center text-xs text-muted">
@@ -171,20 +182,22 @@ function Board({
         {unplaced.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {unplaced.map((item) => (
-              <button
+              <TrayChip
                 key={item.id}
-                draggable
-                onDragStart={(event) => event.dataTransfer.setData('text/plain', item.id)}
-                onClick={() => {
+                item={item}
+                onPlaceCenter={() => {
                   // Click-to-place drops it centre-field, then arrows refine it.
                   place(item.id, CANVAS / 2, CANVAS / 2);
                   setSelected(item.id);
                 }}
-                className="border border-line-strong bg-raised px-2 py-1.5 font-mono text-xs text-primary transition-colors hover:border-accent"
-                style={{ borderRadius: 'var(--radius)' }}
-              >
-                {item.word}
-              </button>
+                onGhostChange={(pos) => setGhost(pos ? { id: item.id, word: item.word, ...pos } : null)}
+                onCommit={(x, y) => {
+                  const box = surfaceRef.current?.getBoundingClientRect();
+                  if (box && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) {
+                    pointerPlace(item.id, x, y);
+                  }
+                }}
+              />
             ))}
           </div>
         )}
@@ -233,26 +246,26 @@ function PlacedWord({
   selected,
   onSelect,
   onNudge,
-  onDragEnd,
+  onMove,
 }: {
   item: ClusterItem;
   reduce: boolean;
   selected: boolean;
   onSelect: () => void;
   onNudge: (dx: number, dy: number) => void;
-  onDragEnd: (clientX: number, clientY: number) => void;
+  onMove: (clientX: number, clientY: number) => void;
 }) {
+  const [dragging, setDragging] = useState(false);
+  const drag = usePointerDrag({
+    onDragStart: () => setDragging(true),
+    onDragMove: onMove,
+    onDragEnd: () => setDragging(false),
+  });
+
   return (
     <motion.button
       type="button"
-      draggable
-      onDragStart={(event) =>
-        (event as unknown as React.DragEvent).dataTransfer.setData('text/plain', item.id)
-      }
-      onDragEnd={(event) => {
-        const e = event as unknown as React.DragEvent;
-        if (e.clientX || e.clientY) onDragEnd(e.clientX, e.clientY);
-      }}
+      {...drag}
       onClick={onSelect}
       onKeyDown={(event) => {
         const map: Record<string, [number, number]> = {
@@ -273,15 +286,57 @@ function PlacedWord({
         selected ? 'border-accent bg-accent-dim text-primary' : 'border-line-strong bg-raised text-secondary'
       )}
       style={{
+        ...drag.style,
         left: `${item.placedX}%`,
         top: `${item.placedY}%`,
         borderRadius: 'var(--radius)',
       }}
       animate={{ left: `${item.placedX}%`, top: `${item.placedY}%` }}
-      transition={reduce ? { duration: 0 } : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      transition={dragging || reduce ? { duration: 0 } : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
     >
       {item.word}
     </motion.button>
+  );
+}
+
+/**
+ * A not-yet-placed word, in the tray under the plot.
+ *
+ * Dragging it doesn't place it until release — only then do we know whether
+ * it landed on the plot at all — so a floating ghost (owned by `Board`,
+ * since it has to render above the plot, not just this button) is the only
+ * feedback during the drag itself.
+ */
+function TrayChip({
+  item,
+  onPlaceCenter,
+  onGhostChange,
+  onCommit,
+}: {
+  item: ClusterItem;
+  onPlaceCenter: () => void;
+  onGhostChange: (pos: { x: number; y: number } | null) => void;
+  onCommit: (clientX: number, clientY: number) => void;
+}) {
+  const drag = usePointerDrag({
+    onDragStart: (x, y) => onGhostChange({ x, y }),
+    onDragMove: (x, y) => onGhostChange({ x, y }),
+    onDragEnd: (x, y) => {
+      onGhostChange(null);
+      onCommit(x, y);
+    },
+  });
+
+  return (
+    <button
+      type="button"
+      {...drag}
+      onClick={onPlaceCenter}
+      className="border border-line-strong bg-raised px-2 py-1.5 font-mono text-xs text-primary transition-colors hover:border-accent"
+      style={{ ...drag.style, borderRadius: 'var(--radius)' }}
+    >
+      {item.word}
+    </button>
   );
 }
 

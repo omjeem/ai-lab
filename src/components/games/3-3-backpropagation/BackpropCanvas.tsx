@@ -12,7 +12,7 @@
  * Model-free like the rest of World 3: the net trains synchronously from a
  * seed in `initState`, so there is nothing for `ModelGate` to gate.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { ArrowDown, ArrowUp, Check, GripVertical, RotateCcw, Zap } from 'lucide-react';
 import {
@@ -27,6 +27,8 @@ import {
 import type { Activation, EdgeGradient } from '@/models/tinyNetTrainer';
 import { Button, Meter, Panel, Readout, Tag, cx } from '@/components/ui';
 import { useRetrySignal } from '../useRetrySignal';
+import { usePointerDrag } from '../usePointerDrag';
+import { useDragReorder } from '../useDragReorder';
 import type { GameComponentProps } from '../registry';
 import type { EngineRules, ScoreResult } from '@/types/game';
 
@@ -294,7 +296,6 @@ function RankMagnitudeBoard({
 }) {
   const [activeRound, setActiveRound] = useState(0);
   const round = state.rankRounds[activeRound];
-  const dragging = useRef<number | null>(null);
 
   const truePosition = useMemo(() => {
     if (!round) return new Map<number, number>();
@@ -329,6 +330,8 @@ function RankMagnitudeBoard({
     },
     [round, activeRound, dispatch]
   );
+
+  const reorder = useDragReorder(move);
 
   if (!round) return null;
 
@@ -378,66 +381,131 @@ function RankMagnitudeBoard({
               const edge = round.edges[edgeIndex]!;
               const matches = revealed && truePosition.get(edgeIndex) === position;
               return (
-                <li
+                <EdgeRow
                   key={edgeIndex}
-                  draggable={!revealed}
-                  onDragStart={() => (dragging.current = position)}
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    const from = dragging.current;
-                    dragging.current = null;
-                    if (from !== null && from !== position) move(from, position);
-                  }}
-                  className={cx(
-                    'flex items-center gap-3 border px-2 py-2',
-                    revealed
-                      ? matches
-                        ? 'border-good/40 bg-good/5'
-                        : 'border-bad/40 bg-bad/5'
-                      : 'border-line-strong bg-raised'
-                  )}
-                  style={{ borderRadius: 'var(--radius)' }}
-                >
-                  <span className="readout w-5 shrink-0 text-xs text-muted">{position + 1}</span>
-                  {!revealed && (
-                    <span className="text-muted" aria-hidden>
-                      <GripVertical size={13} strokeWidth={1.75} />
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1 truncate font-mono text-xs text-primary">
-                    layer {edge.layer + 1} · unit {edge.from + 1} → unit {edge.to + 1}
-                  </span>
-                  {revealed ? (
-                    <span className="readout shrink-0 text-xs text-secondary">
-                      |{Math.abs(edge.value).toFixed(4)}|{' '}
-                      {matches ? 'exact' : `really #${(truePosition.get(edgeIndex) ?? 0) + 1}`}
-                    </span>
-                  ) : (
-                    <span className="flex shrink-0 items-center gap-1">
-                      <MoveButton
-                        label={`Move edge up in round ${activeRound + 1}`}
-                        disabled={position === 0}
-                        onClick={() => move(position, position - 1)}
-                      >
-                        <ArrowUp size={12} strokeWidth={2} />
-                      </MoveButton>
-                      <MoveButton
-                        label={`Move edge down in round ${activeRound + 1}`}
-                        disabled={position === round.ordering.length - 1}
-                        onClick={() => move(position, position + 1)}
-                      >
-                        <ArrowDown size={12} strokeWidth={2} />
-                      </MoveButton>
-                    </span>
-                  )}
-                </li>
+                  edge={edge}
+                  position={position}
+                  revealed={revealed}
+                  matches={matches}
+                  trueRank={truePosition.get(edgeIndex) ?? 0}
+                  totalItems={round.ordering.length}
+                  activeRound={activeRound}
+                  dragging={reorder.dragIndex === position}
+                  dropTarget={
+                    reorder.overIndex === position &&
+                    reorder.dragIndex !== null &&
+                    reorder.dragIndex !== position
+                  }
+                  registerRef={reorder.registerItem(position)}
+                  onGripDragStart={() => reorder.startDrag(position)}
+                  onGripDragMove={reorder.dragTo}
+                  onGripDragEnd={reorder.dropAt}
+                  onMoveUp={() => move(position, position - 1)}
+                  onMoveDown={() => move(position, position + 1)}
+                />
               );
             })}
           </ol>
         </Panel>
       </div>
     </div>
+  );
+}
+
+/**
+ * One row of the ranking list.
+ *
+ * The grip glyph, not the whole row, is the drag target — the row also holds
+ * the up/down buttons, and capturing the pointer at the row would swallow
+ * their clicks too.
+ */
+function EdgeRow({
+  edge,
+  position,
+  revealed,
+  matches,
+  trueRank,
+  totalItems,
+  activeRound,
+  dragging,
+  dropTarget,
+  registerRef,
+  onGripDragStart,
+  onGripDragMove,
+  onGripDragEnd,
+  onMoveUp,
+  onMoveDown,
+}: {
+  edge: EdgeGradient;
+  position: number;
+  revealed: boolean;
+  matches: boolean;
+  trueRank: number;
+  totalItems: number;
+  activeRound: number;
+  dragging: boolean;
+  dropTarget: boolean;
+  registerRef: (element: HTMLElement | null) => void;
+  onGripDragStart: () => void;
+  onGripDragMove: (clientY: number) => void;
+  onGripDragEnd: (clientY: number) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const grip = usePointerDrag({
+    onDragStart: onGripDragStart,
+    onDragMove: (_x, y) => onGripDragMove(y),
+    onDragEnd: (_x, y) => onGripDragEnd(y),
+    threshold: 6,
+  });
+
+  return (
+    <li
+      ref={registerRef}
+      className={cx(
+        'flex items-center gap-3 border px-2 py-2 transition-opacity',
+        dragging && 'opacity-40',
+        dropTarget && 'border-accent',
+        revealed
+          ? matches
+            ? 'border-good/40 bg-good/5'
+            : 'border-bad/40 bg-bad/5'
+          : 'border-line-strong bg-raised'
+      )}
+      style={{ borderRadius: 'var(--radius)' }}
+    >
+      <span className="readout w-5 shrink-0 text-xs text-muted">{position + 1}</span>
+      {!revealed && (
+        <span {...grip} style={{ ...grip.style, cursor: 'grab' }} className="text-muted active:cursor-grabbing">
+          <GripVertical size={13} strokeWidth={1.75} aria-hidden />
+        </span>
+      )}
+      <span className="min-w-0 flex-1 truncate font-mono text-xs text-primary">
+        layer {edge.layer + 1} · unit {edge.from + 1} → unit {edge.to + 1}
+      </span>
+      {revealed ? (
+        <span className="readout shrink-0 text-xs text-secondary">
+          |{Math.abs(edge.value).toFixed(4)}| {matches ? 'exact' : `really #${trueRank + 1}`}
+        </span>
+      ) : (
+        <span className="flex shrink-0 items-center gap-1">
+          <MoveButton
+            label={`Move edge up in round ${activeRound + 1}`}
+            disabled={position === 0}
+            onClick={onMoveUp}
+          >
+            <ArrowUp size={12} strokeWidth={2} />
+          </MoveButton>
+          <MoveButton
+            label={`Move edge down in round ${activeRound + 1}`}
+            disabled={position === totalItems - 1}
+            onClick={onMoveDown}
+          >
+            <ArrowDown size={12} strokeWidth={2} />
+          </MoveButton>
+        </span>
+      )}
+    </li>
   );
 }
 

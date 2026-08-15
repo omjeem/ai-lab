@@ -19,6 +19,7 @@
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",
     "@mlc-ai/web-llm": "^0.2.84",
+    "@vercel/analytics": "^2.0.1",
     "idb": "^8.0.3",
     "lucide-react": "^1.31.0",
     "ml-pca": "^4.1.1",

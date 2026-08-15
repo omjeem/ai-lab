@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { AppShell } from '@/components/AppShell';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
+import { Analytics } from '@vercel/analytics/next';
 
 /* Self-hosted at build time, so first paint works offline after install. */
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'], display: 'swap' });
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full">
         <AppShell>{children}</AppShell>
+        <Analytics />
       </body>
     </html>
   );

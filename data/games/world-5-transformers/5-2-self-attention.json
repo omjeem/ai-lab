@@ -11,8 +11,8 @@
   },
   "modelRequirement": {
     "tier": "browser-heavy",
-    "modelId": "Xenova/distilbert-base-uncased",
-    "estimatedSizeMB": 67,
+    "modelId": "Qdrant/all_miniLM_L6_v2_with_attentions",
+    "estimatedSizeMB": 87,
     "fallbackMessage": null,
     "loadFailureMessage": "The transformer could not be downloaded, so no real attention weights can be extracted. This chapter needs the model — check your connection and retry. It runs offline once cached."
   },
@@ -47,7 +47,12 @@
         { "threshold": 0.66, "stars": 1 },
         { "threshold": 0.99, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Look for what \"it\" would plausibly refer to given the rest of the sentence — the model's attention often, but not always, tracks the same cue a careful reader would.",
+        "Layer 4's row is a mean over 12 heads, so it is smoother than any single head. It tends to favour whichever candidate is most central to the clause \"it\" sits in, not just the nearest noun.",
+        "Verified against the real model at layer 4, mean-aggregated: for \"the cat sat on the mat because it was warm\", \"it\" attends most to cat (16.6% of the row); for \"the trophy did not fit in the suitcase because it was too large\", most to trophy (23.2%); for \"sarah handed the book to mark after she finished it\", most to book (26.6%)."
+      ]
     },
     {
       "id": "5-2-l2",
@@ -79,7 +84,12 @@
         { "threshold": 0.2, "stars": 2 },
         { "threshold": 0.12, "stars": 3 }
       ],
-      "xpReward": 65
+      "xpReward": 65,
+      "hints": [
+        "Real attention rows are rarely a clean spike on one \"obviously correct\" token — mass usually spreads across several tokens, including function words like \"because\" or \"was\". A distribution that hedges across the top few candidates beats one that bets everything on your best guess.",
+        "Scoring is total variation distance on the shape, not the total — 10/20/30 and 100/200/300 score identically. Get the relative sizes right before worrying about the exact numbers.",
+        "Verified at layer 4, mean-aggregated: for \"the doctor called the nurse because she was late\", the real row (of 100) is roughly because 27, was 23, the 12, called 11, she 8, the 7, doctor 6, nurse 6 — \"doctor\" and \"nurse\" themselves are actually among the smallest shares. For \"we poured water into the glass until it was full\", it's we 23, the 11, glass 11, full 11, until 10, was 10, poured 9, water 7, into 7."
+      ]
     },
     {
       "id": "5-2-l3",
@@ -94,7 +104,7 @@
         "layerRange": [0, 5],
         "headAggregation": "mean",
         "excludeSpecialTokens": true,
-        "maxEditDistance": 12,
+        "maxEditDistance": 20,
         "attempts": 6,
         "minFlipMargin": 0.05,
         "allowUserSentence": true
@@ -109,7 +119,12 @@
         { "threshold": 0.72, "stars": 2 },
         { "threshold": 0.88, "stars": 3 }
       ],
-      "xpReward": 85
+      "xpReward": 85,
+      "hints": [
+        "Swapping the adjective (\"large\" for \"small\") is the intuitive edit, but try it at every layer first — this real model does not move the same way at every layer, and some layers barely react to the adjective at all.",
+        "Verified across three dozen adjective swaps at layers 3-5: this specific model's mid-to-late attention from \"it\" locks onto \"trophy\" almost regardless of which adjective follows — it is tracking something closer to which noun is more salient, not the size relationship the sentence describes. To flip the winner for real, change which noun sits in the position the model favours, not just the adjective describing it.",
+        "Verified working edit at layer 3: \"the suitcase did not fit in the trophy because it was too large\" (swap the two nouns, keep everything else) moves the winner to suitcase at 19.3% of the row — trophy itself has fallen to 8.6%, well clear of the required 5-point margin. It's a big edit, so it won't max the edit-distance bonus, but it reliably clears the pass bar."
+      ]
     }
   ]
 }

@@ -194,6 +194,43 @@ describe('attentionGuessEngine — guess argmax', () => {
     state = applyAction(state, { type: 'SET_LAYER', value: -5 });
     expect(state.layer).toBe(config.layerRange![0]);
   });
+
+  it('recomputes every round for the newly selected layer, not just the label', async () => {
+    const prepared = await prepare(config, { attention: fakeAttention });
+    let state = initState(config, rulesFor(0), prepared);
+
+    const newLayer = config.layerRange![1]!;
+    state = applyAction(state, { type: 'SET_LAYER', value: newLayer });
+
+    // What SET_LAYER produced should be indistinguishable from building the
+    // round fresh at that layer — not left over from whatever layer the
+    // level opened on.
+    const expected = buildRound(config, prepared.results[0]!, newLayer);
+    expect(state.rounds[0]!.trueRow).toEqual(expected.trueRow);
+  });
+
+  it('keeps an existing guess when the layer changes under it', async () => {
+    const prepared = await prepare(config, { attention: fakeAttention });
+    let state = initState(config, rulesFor(0), prepared);
+
+    const guessedKey = state.rounds[0]!.keyIndices[0]!;
+    state = applyAction(state, { type: 'GUESS', roundIndex: 0, keyIndex: guessedKey });
+    state = applyAction(state, { type: 'SET_LAYER', value: config.layerRange![1]! });
+
+    expect(state.rounds[0]!.guessIndex).toBe(guessedKey);
+  });
+
+  it('RESET rebuilds from the real prepared attention, not an empty tensor', async () => {
+    const prepared = await prepare(config, { attention: fakeAttention });
+    let state = initState(config, rulesFor(0), prepared);
+    state = applyAction(state, { type: 'GUESS', roundIndex: 0, keyIndex: state.rounds[0]!.keyIndices[0]! });
+
+    state = applyAction(state, { type: 'RESET' });
+
+    expect(state.rounds[0]!.trueRow.length).toBeGreaterThan(0);
+    expect(state.rounds[0]!.trueRow.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
+    expect(state.rounds[0]!.guessIndex).toBeNull();
+  });
 });
 
 describe('attentionGuessEngine — draw the distribution', () => {
@@ -347,6 +384,41 @@ describe('attentionGuessEngine — flip the reference', () => {
 
     expect(state.attempts).toHaveLength(config.attempts!);
     expect(evaluate(state).value).toBe(best);
+  });
+
+  it('is not fooled by an edit that only shifts the winning token to a new index', async () => {
+    const prepared = await prepare(config, { attention: fakeAttention });
+    let state = initState(config, rulesFor(2), prepared);
+
+    // Inserting a word before the winner shifts every later token's index —
+    // the same word ("trophy") still wins, just one slot further along.
+    // Comparing by raw index would call this a flip; it is not one.
+    const shifted = 'well the trophy did not fit in the suitcase because it was too large';
+    state = applyAction(state, {
+      type: 'SUBMIT_EDIT',
+      sentence: shifted,
+      attention: await fakeAttention.attention(shifted),
+    });
+
+    expect(state.attempts[0]!.winnerToken).toBe('trophy');
+    expect(state.attempts[0]!.flipped).toBe(false);
+  });
+
+  it('recomputes the baseline together with round 0 when the layer changes', async () => {
+    const prepared = await prepare(config, { attention: fakeAttention });
+    let state = initState(config, rulesFor(2), prepared);
+
+    const newLayer = config.layerRange![1]!;
+    state = applyAction(state, { type: 'SET_LAYER', value: newLayer });
+
+    const expectedRound = buildRound(config, prepared.results[0]!, newLayer);
+    let best = 0;
+    for (let i = 1; i < expectedRound.trueRow.length; i++) {
+      if (expectedRound.trueRow[i]! > expectedRound.trueRow[best]!) best = i;
+    }
+    const expectedWinnerToken = expectedRound.tokens[expectedRound.keyIndices[best]!];
+
+    expect(state.baseline!.winnerToken).toBe(expectedWinnerToken);
   });
 });
 

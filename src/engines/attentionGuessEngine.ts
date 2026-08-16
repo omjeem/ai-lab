@@ -47,6 +47,7 @@ export interface FlipAttempt {
   sentence: string;
   editDistance: number;
   winnerIndex: number;
+  winnerToken: string;
   margin: number;
   flipped: boolean;
   score: number;
@@ -63,9 +64,17 @@ export interface AttentionGuessState {
   mode: AttentionMode;
   config: AttentionGuessConfig;
   layer: number;
+  /**
+   * The real attention data every round is derived from, one per sentence.
+   * Kept so `SET_LAYER` and `RESET` can rebuild `rounds` from the actual
+   * model output at the newly selected layer instead of either leaving
+   * stale data in place or reconstructing from a round that never carried
+   * the raw tensor to begin with.
+   */
+  results: AttentionResult[];
   rounds: AttentionRound[];
-  /** Baseline for the flip level: which token originally wins. */
-  baseline: { sentence: string; winnerIndex: number; candidates: number[] } | null;
+  /** Baseline for the flip level: which token originally wins, at the current layer. */
+  baseline: { sentence: string; winnerIndex: number; winnerToken: string; candidates: number[] } | null;
   attempts: FlipAttempt[];
   bestFlipScore: number;
 }
@@ -197,6 +206,51 @@ export function editDistance(a: string, b: string): number {
   return previous[b.length]!;
 }
 
+/**
+ * The flip level's baseline: which token currently wins at this round's
+ * layer, and the two strongest candidates it could flip between. Recomputed
+ * fresh whenever the layer changes — see `SET_LAYER` below — rather than
+ * fixed at whatever layer was active when the level opened.
+ */
+function baselineFromRound(round: AttentionRound, sentence: string): NonNullable<AttentionGuessState['baseline']> {
+  const ranked = round.trueRow
+    .map((weight, i) => ({ weight, index: round.keyIndices[i]! }))
+    .sort((a, b) => b.weight - a.weight);
+  const winnerIndex = ranked[0]?.index ?? -1;
+  return {
+    sentence,
+    winnerIndex,
+    winnerToken: round.tokens[winnerIndex] ?? '',
+    candidates: ranked.slice(0, 2).map((r) => r.index),
+  };
+}
+
+/**
+ * Rebuilds every round's real data (`trueRow` etc.) for a layer, carrying
+ * over whatever the player had already answered. Safe to do positionally:
+ * `queryIndex`/`keyIndices` come from tokenisation and special-token
+ * filtering alone, neither of which depends on the layer, so the candidate
+ * set and its order are identical before and after — only the weights move.
+ */
+function rebuildRounds(
+  config: AttentionGuessConfig,
+  results: AttentionResult[],
+  layer: number,
+  previous: AttentionRound[]
+): AttentionRound[] {
+  // Iterates `previous`, not `results`: `ADD_ROUND` can append a round with
+  // no raw `AttentionResult` behind it (ADD_ROUND takes an already-built
+  // round, not a sentence to prepare), so `previous` can be longer than
+  // `results`. Anything past the end of `results` has no layer data to
+  // rebuild from and is carried over unchanged rather than dropped.
+  return previous.map((prior, i) => {
+    const result = results[i];
+    if (!result) return prior;
+    const fresh = buildRound(config, result, layer);
+    return { ...fresh, guessIndex: prior.guessIndex, allocation: prior.allocation };
+  });
+}
+
 export function initState(
   config: AttentionGuessConfig,
   rules: EngineRules,
@@ -204,22 +258,11 @@ export function initState(
 ): AttentionGuessState {
   const layer = config.layer;
   const limit = config.rounds ?? prepared.results.length;
-  const rounds = prepared.results.slice(0, limit).map((result) => buildRound(config, result, layer));
+  const results = prepared.results.slice(0, limit);
+  const rounds = results.map((result) => buildRound(config, result, layer));
 
-  // The flip level needs a baseline: which token currently wins, and the two
-  // strongest candidates it could flip between.
-  let baseline: AttentionGuessState['baseline'] = null;
-  if (config.mode === 'flip-reference' && rounds[0]) {
-    const round = rounds[0];
-    const ranked = round.trueRow
-      .map((weight, i) => ({ weight, index: round.keyIndices[i]! }))
-      .sort((a, b) => b.weight - a.weight);
-    baseline = {
-      sentence: config.sentences[0] ?? '',
-      winnerIndex: ranked[0]?.index ?? -1,
-      candidates: ranked.slice(0, 2).map((r) => r.index),
-    };
-  }
+  const baseline =
+    config.mode === 'flip-reference' && rounds[0] ? baselineFromRound(rounds[0], config.sentences[0] ?? '') : null;
 
   return {
     rules,
@@ -228,6 +271,7 @@ export function initState(
     mode: config.mode,
     config,
     layer,
+    results,
     rounds,
     baseline,
     attempts: [],
@@ -272,7 +316,16 @@ export function applyAction(
     case 'SET_LAYER': {
       const [min, max] = state.config.layerRange ?? [state.config.layer, state.config.layer];
       if (!Number.isInteger(action.value)) return state;
-      return bump({ layer: Math.round(clamp(action.value, min, max)) });
+      const layer = Math.round(clamp(action.value, min, max));
+      // Rebuilds every round's real weights for the new layer — otherwise a
+      // guess or an allocation would be graded against whatever layer was
+      // active when the level opened, not the one the matrix is showing.
+      const rounds = rebuildRounds(state.config, state.results, layer, state.rounds);
+      const baseline =
+        state.mode === 'flip-reference' && rounds[0]
+          ? baselineFromRound(rounds[0], state.config.sentences[0] ?? '')
+          : state.baseline;
+      return bump({ layer, rounds, baseline });
     }
 
     case 'ADD_ROUND':
@@ -286,16 +339,22 @@ export function applyAction(
 
       const round = buildRound(state.config, action.attention, state.layer);
       const ranked = round.trueRow
-        .map((weight, i) => ({ weight, index: round.keyIndices[i]! }))
+        .map((weight, i) => ({ weight, index: round.keyIndices[i]!, token: round.tokens[round.keyIndices[i]!]! }))
         .sort((a, b) => b.weight - a.weight);
 
       const winnerIndex = ranked[0]?.index ?? -1;
+      const winnerToken = ranked[0]?.token ?? '';
       const margin = (ranked[0]?.weight ?? 0) - (ranked[1]?.weight ?? 0);
       const distance = editDistance(state.baseline.sentence, action.sentence);
       const minMargin = state.config.minFlipMargin ?? 0;
       const maxEdit = state.config.maxEditDistance ?? Infinity;
 
-      const flipped = winnerIndex !== state.baseline.winnerIndex && margin >= minMargin;
+      // Compared by the winning token's text, not its position: an edit that
+      // inserts or removes a token earlier in the sentence shifts every
+      // later index, so two different sentences' indices lining up (or not)
+      // says nothing on its own about whether the same word actually won.
+      const flipped =
+        winnerToken.toLowerCase() !== state.baseline.winnerToken.toLowerCase() && margin >= minMargin;
       // Flipping is most of the credit; doing it with a small edit earns the rest.
       const editCredit = maxEdit === Infinity ? 1 : clamp(1 - distance / maxEdit, 0, 1);
       const score = flipped ? 0.6 + 0.4 * editCredit : 0;
@@ -303,16 +362,14 @@ export function applyAction(
       return bump({
         attempts: [
           ...state.attempts,
-          { sentence: action.sentence, editDistance: distance, winnerIndex, margin, flipped, score },
+          { sentence: action.sentence, editDistance: distance, winnerIndex, winnerToken, margin, flipped, score },
         ],
         bestFlipScore: Math.max(state.bestFlipScore, score),
       });
     }
 
     case 'RESET':
-      return initState(state.config, state.rules, {
-        results: state.rounds.map((r) => ({ tokens: r.tokens, attention: [] })),
-      });
+      return initState(state.config, state.rules, { results: state.results });
 
     case 'SUBMIT':
       return { ...state, status: 'complete', actionCount: state.actionCount + 1 };

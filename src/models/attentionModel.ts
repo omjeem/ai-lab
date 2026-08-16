@@ -4,12 +4,25 @@
  * This is what Worlds 5.2 to 5.4 are built on. The model is loaded with
  * `output_attentions` and `output_hidden_states` so the tensors the chapters
  * visualise are the ones the forward pass actually produced.
+ *
+ * `Xenova/distilbert-base-uncased` (the model this was originally built
+ * against — see plan-docs A1) turned out not to work: its ONNX export was
+ * converted for the `DistilBertForMaskedLM` task, so its graph only has a
+ * `logits` output, no `attentions`/`hidden_states`, regardless of what flags
+ * are passed at load time. `Qdrant/all_miniLM_L6_v2_with_attentions` is a
+ * base `BertModel` export (sentence-transformers/all-MiniLM-L6-v2, 6 layers,
+ * 12 heads — the same layer/head count the original config assumed) whose
+ * graph was built with `output_attentions: true`, verified by actually
+ * running it: it returns real `attention_1..attention_6` tensors. It has no
+ * `hidden_states` output, so `hiddenStateModel` below still throws for it —
+ * genuinely absent from the graph, not a bug — which blocks 5.4 until that
+ * chapter finds a different export.
  */
 import type { AttentionDep, AttentionResult, HiddenStateDep, HiddenStateResult } from '@/engines/deps';
 import { loadOnce, toNestedArray } from './transformersRuntime';
 
-export const ATTENTION_MODEL_ID = 'Xenova/distilbert-base-uncased';
-const ATTENTION_SIZE_MB = 67;
+export const ATTENTION_MODEL_ID = 'Qdrant/all_miniLM_L6_v2_with_attentions';
+const ATTENTION_SIZE_MB = 87;
 
 interface LoadedAttentionModel {
   tokenizer: {
@@ -31,12 +44,25 @@ async function getModel(): Promise<LoadedAttentionModel> {
         }),
         transformers.AutoModel.from_pretrained(ATTENTION_MODEL_ID, {
           device: backend,
+          // This repo ships exactly one weights file — a full-precision
+          // model.onnx, no quantized variant. Every other model wrapper in
+          // this codebase leaves dtype unset and lets transformers.js pick,
+          // which defaults to requesting a quantized file on the WASM
+          // backend (model_quantized.onnx) — a 404 against this repo. Forcing
+          // fp32 is what makes this the one wrapper that has to say so.
+          dtype: 'fp32',
           progress_callback: onProgress,
           // transformers.js surfaces attention and hidden-state tensors only
           // when the ONNX graph exports them; these flags are read from the
           // config rather than the load options, so they are not in the public
           // option type. Passing them through is the supported way to ask.
-          ...({ output_attentions: true, output_hidden_states: true } as Record<string, unknown>),
+          ...({
+            output_attentions: true,
+            output_hidden_states: true,
+            // This repo's model.onnx sits at the repo root, not the usual
+            // onnx/ subfolder transformers.js defaults to.
+            subfolder: '',
+          } as Record<string, unknown>),
         } as Parameters<typeof transformers.AutoModel.from_pretrained>[1]),
       ]);
       return { tokenizer, model } as unknown as LoadedAttentionModel;
@@ -62,28 +88,36 @@ async function runForward(sentence: string): Promise<{
 }
 
 /**
- * Collects the per-layer attention tensors.
- *
- * transformers.js returns them either as an `attentions` array or as numbered
- * `attentions.0` keys depending on the export, so both are handled.
+ * Collects the per-layer tensors for whichever output family this export
+ * used — every ONNX conversion that includes them names them differently:
+ * a single `attentions` array, numbered `attentions.0`/`attentions_0` keys
+ * (0-indexed), or numbered `attention_1` keys (1-indexed, singular — what
+ * `Qdrant/all_miniLM_L6_v2_with_attentions` actually returns). Every shape
+ * is checked rather than assumed, so a future model swap only needs a new
+ * prefix added here, not a rewrite.
  */
-function collectLayers(outputs: Record<string, unknown>, prefix: string): unknown[] {
-  const direct = outputs[prefix];
-  if (Array.isArray(direct)) return direct;
+function collectLayers(outputs: Record<string, unknown>, prefixes: string[]): unknown[] {
+  for (const prefix of prefixes) {
+    const direct = outputs[prefix];
+    if (Array.isArray(direct)) return direct;
 
-  const numbered: unknown[] = [];
-  for (let layer = 0; ; layer++) {
-    const value = outputs[`${prefix}.${layer}`] ?? outputs[`${prefix}_${layer}`];
-    if (value === undefined) break;
-    numbered.push(value);
+    for (const start of [0, 1]) {
+      const numbered: unknown[] = [];
+      for (let layer = start; ; layer++) {
+        const value = outputs[`${prefix}.${layer}`] ?? outputs[`${prefix}_${layer}`];
+        if (value === undefined) break;
+        numbered.push(value);
+      }
+      if (numbered.length > 0) return numbered;
+    }
   }
-  return numbered;
+  return [];
 }
 
 export const attentionModel: AttentionDep = {
   async attention(sentence: string): Promise<AttentionResult> {
     const { tokens, outputs } = await runForward(sentence);
-    const layers = collectLayers(outputs, 'attentions');
+    const layers = collectLayers(outputs, ['attentions', 'attention']);
 
     if (layers.length === 0) {
       throw new Error(
@@ -104,7 +138,7 @@ export const attentionModel: AttentionDep = {
 export const hiddenStateModel: HiddenStateDep = {
   async hiddenStates(sentence: string): Promise<HiddenStateResult> {
     const { tokens, outputs } = await runForward(sentence);
-    const layers = collectLayers(outputs, 'hidden_states');
+    const layers = collectLayers(outputs, ['hidden_states', 'hidden_state']);
 
     if (layers.length === 0) {
       throw new Error(

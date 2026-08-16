@@ -14,10 +14,10 @@ next-token distributions.
 | Layer | State |
 | --- | --- |
 | Curriculum (22 chapters, 67 levels) | Complete, schema-validated |
-| Game logic engines (22) | Complete, 767 tests passing |
+| Game logic engines (22) | Complete, 772 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
-| Per-chapter game canvases | **16 of 22 built** (all of World 1, plus 2-1 through 2-4, all of World 3, 4-1 through 4-3) |
+| Per-chapter game canvases | **17 of 22 built** (all of World 1, plus 2-1 through 2-4, all of World 3, 4-1 through 4-3, 5-2) |
 | Backend, admin, offline sync, PWA | Complete |
 
 Every chapter's logic is finished and tested. What is largely outstanding is the per-chapter

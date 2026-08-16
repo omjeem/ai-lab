@@ -17,13 +17,15 @@ next-token distributions.
 | Game logic engines (22) | Complete, 774 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
-| Per-chapter game canvases | **21 of 22 built** (all of Worlds 1–5, only World 6's capstone left) |
+| Per-chapter game canvases | **22 of 22 built** — every chapter, all six worlds |
 | Backend, admin, offline sync, PWA | Complete |
 
-Every chapter's logic is finished and tested. What is largely outstanding is the per-chapter
-visualisation layer: chapters without a canvas open, load their model, and show an explicit
-"instrument not wired up yet" panel rather than an empty screen. See
-[Adding a chapter's canvas](#adding-a-chapters-canvas).
+Every chapter's logic, model wrapper and canvas are finished and tested. What remains is the
+handful of infrastructure items in `plan-docs/REMAINING-WORK.md` Part A that need a live
+credential, a real offline run, or a WebGPU-capable browser to exercise — sound design, the
+offline path, the Ollama Cloud and MongoDB round trips. See
+[Adding a chapter's canvas](#adding-a-chapters-canvas) for the pattern, in case any of the 22 need
+revisiting.
 
 ---
 

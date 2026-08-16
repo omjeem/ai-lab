@@ -65,7 +65,12 @@
         { "threshold": 2, "stars": 2 },
         { "threshold": 3, "stars": 3 }
       ],
-      "xpReward": 70
+      "xpReward": 70,
+      "hints": [
+        "Each challenge reads a different number off the same kind of run — check which one you're chasing (firstTokenProbability, meanEntropyBits, or generatedTokenCount) before picking a prompt for it. A setting that helps one can actively hurt another.",
+        "Temperature and prompt certainty push the same way: an unambiguous, well-known completion (a fixed phrase, a basic fact) at a low temperature is what pushes the very first token's probability past 0.9 — sampling from a narrow distribution around whatever the model already favours. For the entropy challenge, do the opposite: a genuinely open prompt at a high temperature spreads probability across many plausible next tokens.",
+        "For the token-count challenge, ask for something with a naturally short answer and say so explicitly — 'reply in one word' or 'answer with just a number' stops the model itself well under the limit, rather than relying on maxTokens to cut off a longer answer mid-sentence."
+      ]
     },
     {
       "id": "6-1-l2",
@@ -92,7 +97,12 @@
         { "threshold": 0.66, "stars": 1 },
         { "threshold": 0.99, "stars": 3 }
       ],
-      "xpReward": 80
+      "xpReward": 80,
+      "hints": [
+        "The fork is rarely the first token — the opening of a sentence is usually heavily constrained by the prompt itself. Look later, at a genuine branch point: a comma, a choice of adjective, the moment the sentence could plausibly go two different ways.",
+        "Click a token to see its real alternatives and entropy before committing. The fork is the step with the single lowest probability — equivalently, the widest real spread of alternatives — not just whichever word looks the most interesting to you.",
+        "positionTolerance is 2, so landing within two tokens of the true fork still counts, not just the exact index. Open-ended prompts ('the weather today is', 'my favourite thing about') tend to fork earlier, since the model has more genuine freedom sooner; a prompt with one obvious continuation pushes the fork later or nearly erases it."
+      ]
     },
     {
       "id": "6-1-l3",
@@ -122,7 +132,12 @@
         { "threshold": 0.78, "stars": 2 },
         { "threshold": 0.92, "stars": 3 }
       ],
-      "xpReward": 110
+      "xpReward": 110,
+      "hints": [
+        "This is unanswerable until both models have actually run on the same prompt — the true answer for every axis only exists once a local trace and a cloud trace both exist, so run local, then run cloud, before predicting.",
+        "Read what each axis actually measures before guessing from 'bigger is smarter' intuition: verbosity is just token count, confidence is mean per-token probability, diversity is the distinct-token ratio, decisiveness is negative mean entropy — none of them are about correctness.",
+        "Verified against how the cloud proxy actually works: the cloud endpoint returns no per-token detail at all, so its trace always measures 0 for verbosity, confidence and diversity — the honest prediction for those three is 'no, the cloud model doesn't score higher,' regardless of prompt. Decisiveness is the exception: 0 beats the local model's real (negative) decisiveness in effectively every run, so that one honestly predicts 'yes.'"
+      ]
     }
   ]
 }

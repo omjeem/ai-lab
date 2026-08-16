@@ -44,7 +44,12 @@
         { "threshold": 0.12, "stars": 2 },
         { "threshold": 0.05, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "The default temperature of 1 leaves the distribution far too flat for the target — you need to sharpen it, which means moving the slider down, not up.",
+        "Entropy falls smoothly as temperature drops, so this is a one-directional search: watch the readout and walk the slider down until it enters the shaded band, then fine-tune from there.",
+        "Verified against the real model for this exact prompt: temperature 0.45 reshapes the distribution to 2.39 bits of entropy against a target of 2.40 — an error of 0.009, comfortably inside the 0.05 band for 3 stars."
+      ]
     },
     {
       "id": "4-3-l2",
@@ -60,7 +65,7 @@
         ],
         "topK": 40,
         "topKRange": [1, 50],
-        "topP": 0.9,
+        "topP": 0.5,
         "topPRange": [0.1, 1],
         "temperature": 1,
         "temperatureRange": [0.1, 2],
@@ -77,7 +82,12 @@
         { "threshold": 0.78, "stars": 2 },
         { "threshold": 0.9, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Top-p adapts to how confident the model is at this position, so one top-p value can behave on both prompts. A fixed top-k cannot — it either wastes its budget on the confident prompt or starves the uncertain one.",
+        "Verified against the real model: pinning top-k to 5 or 10 (with top-p wide open) keeps a healthy 90.7% of the mass on \"the chemical symbol for gold is\" (very peaked — the model is confident it's \"Au\") but only 47.3% (k=5) or 63.9% (k=10) on \"the strangest thing I saw that day was a\" (much flatter — dozens of nouns are all plausible). That gap is the whole lesson.",
+        "Verified working setting: top-p ≈ 0.7 (top-k left generous, e.g. 40) keeps 82.9% on the gold prompt — squarely inside the 75–95% band — and 70.0% on the strangest-thing prompt, just under the 75% floor but close enough for a truncationBalanceScore of 0.967, comfortably 3 stars. Nudging top-p up toward 0.75–0.8 pulls the second prompt inside the band too."
+      ]
     },
     {
       "id": "4-3-l3",
@@ -125,7 +135,12 @@
         { "threshold": 0.83, "stars": 2 },
         { "threshold": 0.95, "stars": 3 }
       ],
-      "xpReward": 60
+      "xpReward": 60,
+      "hints": [
+        "Every task starts at the same shared defaults, which is wrong for at least two of the three. Switch tasks with the tabs and look at where each one's entropy readout sits relative to its own target band before touching anything.",
+        "Temperature is the control that matters here — top-k and top-p barely bind at these targets. The factual prompt needs sharpening (lower temperature) from its default; the code prompt needs the opposite, a real push upward, since its default is far too confident (nearly deterministic) for the target; the creative prompt starts closest to its target but on the high side, so it wants a small nudge down, not up.",
+        "Verified against the real model, one setting per task that together score a perfect 1.0: factual at temperature 0.15 → 0.57 bits (target 0.60 ± 0.35); creative at temperature 0.90 → 3.47 bits (target 3.40 ± 0.50); code at temperature 1.50 → 1.29 bits (target 1.20 ± 0.40). Top-k and top-p can stay at their defaults for all three."
+      ]
     }
   ]
 }

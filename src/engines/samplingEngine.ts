@@ -85,6 +85,15 @@ export interface ReshapeResult {
   keptMass: number;
   keptCount: number;
   entropyBits: number;
+  /**
+   * The full tempered pool, ranked, before either truncation — including the
+   * tokens top-k/top-p discarded. Un-renormalised, so its values are directly
+   * comparable to `keptMass`. Display-only: scoring is entirely off `probs`
+   * and `keptMass` above, this is what lets a canvas draw the cut honestly
+   * rather than guessing where it fell.
+   */
+  rankedTokens: string[];
+  rankedProbs: number[];
 }
 
 /**
@@ -99,7 +108,15 @@ export function reshape(
 ): ReshapeResult {
   const { tokens, probs } = distribution;
   if (probs.length === 0) {
-    return { tokens: [], probs: [], keptMass: 0, keptCount: 0, entropyBits: 0 };
+    return {
+      tokens: [],
+      probs: [],
+      keptMass: 0,
+      keptCount: 0,
+      entropyBits: 0,
+      rankedTokens: [],
+      rankedProbs: [],
+    };
   }
 
   const temperature = Math.max(settings.temperature, 1e-6);
@@ -136,6 +153,8 @@ export function reshape(
     keptMass,
     keptCount: kept.length,
     entropyBits: entropyBits(renormalised),
+    rankedTokens: ranked.map((e) => tokens[e.index]!),
+    rankedProbs: ranked.map((e) => e.p),
   };
 }
 

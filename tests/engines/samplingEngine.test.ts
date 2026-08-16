@@ -127,6 +127,15 @@ describe('reshape — truncation', () => {
     const result = reshape(peaked, { temperature: 1, topK: 2, topP: 1 });
     expect(result.keptCount).toBe(2);
   });
+
+  it('exposes the full ranked pool for display, not just what was kept', () => {
+    const result = reshape(peaked, { temperature: 1, topK: 2, topP: 1 });
+    expect(result.rankedTokens).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(result.rankedProbs).toHaveLength(5);
+    // Unlike `probs`, the ranked pool is not renormalised over the kept set.
+    expect(result.rankedProbs.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
+    expect(result.rankedProbs[0]).toBeCloseTo(result.keptMass * result.probs[0]!);
+  });
 });
 
 describe('samplingEngine — entropy target', () => {

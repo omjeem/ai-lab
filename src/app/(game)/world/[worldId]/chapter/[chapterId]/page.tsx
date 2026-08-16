@@ -1,65 +1,36 @@
-'use client';
-
-import { use } from 'react';
-import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { Wrench } from 'lucide-react';
 import { getGame } from '@/lib/curriculum';
-import { ChapterShell } from '@/components/chapter/ChapterShell';
-import { getGameComponent } from '@/components/games/registry';
-import { Button, Heading, Tag } from '@/components/ui';
+import { ChapterPageClient } from './ChapterPageClient';
 
-export default function ChapterPage({
-  params,
-}: {
-  params: Promise<{ worldId: string; chapterId: string }>;
-}) {
-  const { chapterId } = use(params);
+type Params = Promise<{ worldId: string; chapterId: string }>;
+
+/**
+ * Real per-chapter title and description, pulled from the chapter's own
+ * written content (`chapterTitle`, `concept.shortExplanation`) rather than
+ * inheriting the site-wide default — this is what gives every chapter its
+ * own real, distinct, indexable page instead of 20+ pages sharing one title.
+ */
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
+  const { chapterId } = await params;
+  const game = getGame(chapterId);
+  if (!game) return {};
+
+  return {
+    title: game.chapterTitle,
+    description: game.concept.shortExplanation,
+    alternates: { canonical: `/world/${game.world}/chapter/${game.id}` },
+    openGraph: {
+      title: `${game.chapterTitle} · World ${game.world}: ${game.worldTitle}`,
+      description: game.concept.shortExplanation,
+    },
+  };
+}
+
+export default async function ChapterPage({ params }: { params: Params }) {
+  const { chapterId } = await params;
   const game = getGame(chapterId);
   if (!game) notFound();
 
-  const GameComponent = getGameComponent(chapterId);
-
-  return (
-    <ChapterShell game={game}>
-      {(render) =>
-        GameComponent ? (
-          <GameComponent {...render} game={game} />
-        ) : (
-          <NotYetBuilt chapterTitle={game.chapterTitle} engineType={render.level.engineType} />
-        )
-      }
-    </ChapterShell>
-  );
-}
-
-/**
- * Placeholder for chapters whose canvas is not built yet.
- *
- * Says so plainly rather than rendering an empty instrument — the engine and its
- * tests exist, the visualisation does not.
- */
-function NotYetBuilt({
-  chapterTitle,
-  engineType,
-}: {
-  chapterTitle: string;
-  engineType: string;
-}) {
-  return (
-    <div className="grid-field flex flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <span className="text-muted">
-        <Wrench size={22} strokeWidth={1.75} />
-      </span>
-      <Heading level={2}>Instrument not wired up yet</Heading>
-      <p className="max-w-prose text-sm leading-relaxed text-secondary">
-        The logic for {chapterTitle} is finished and tested — what is missing is the canvas that
-        renders it.
-      </p>
-      <Tag>engine · {engineType}</Tag>
-      <Link href="/map">
-        <Button>Back to the map</Button>
-      </Link>
-    </div>
-  );
+  return <ChapterPageClient chapterId={chapterId} />;
 }

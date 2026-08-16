@@ -1,11 +1,11 @@
 ---
 name: ailab-canvas-workflow
-description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs, and a general engine-correctness check for any canvas with a live-adjustable parameter. Load this before building canvas 16 or later, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
+description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json or splitting weights into external data), a general engine-correctness check for any canvas with a live-adjustable parameter, and a ModelGate trap specific to canvases whose levels don't all need the same model. Load this before building canvas 19 or later, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
 ---
 
 # AI Learning Lab canvas workflow
 
-Process notes from building canvases 14 and 15, specifically the parts that cost real time
+Process notes from building canvases 14 through 18, specifically the parts that cost real time
 and aren't in `plan-docs/REMAINING-WORK.md` (which covers per-chapter findings, not tooling).
 
 ## 1. Verifying a canvas in a real browser (Playwright)
@@ -66,10 +66,30 @@ const outputs = await model(await tokenizer('the cat sat on the mat'));
 console.log(Object.keys(outputs)); // and check outputs[key].dims per key
 ```
 
+This needs the candidate repo to have a `config.json` (`AutoModel.from_pretrained` fetches it to
+pick the model class) — if it doesn't, see §6 before spending time here. When a repo has **no**
+config.json, an even faster first check that needs neither config nor tokenizer: download the
+`.onnx` file directly (`curl`) and inspect it with `onnxruntime-node` (already a transitive dep
+of `@huggingface/transformers`, no install needed):
+
+```ts
+import * as ort from 'onnxruntime-node';
+const session = await ort.InferenceSession.create('/path/to/model.onnx');
+console.log(session.inputNames, session.outputNames); // straight from the graph, nothing else required
+```
+
+This is how a plausible-sounding but wrong candidate (`xboluna/all-MiniLM-L6-v2_with_hidden_layer`
+— only `last_hidden_state`/`pooler_output` despite the name) got ruled out in seconds instead of
+after a full config-borrowing attempt (§6). If the graph's weights are split into an external-data
+file, this fails with a `filesystem error` unless the two files sit in the same directory under
+their **original** names (`model.onnx` + `model.onnx.data`) — rename downloaded files back to that
+if you fetched them under a different local filename.
+
 ## 3. Finding an alternate ONNX export when a model doesn't expose what's needed
 
-This is the exact situation for canvas 17 (`hidden_states` still unavailable — see
-REMAINING-WORK.md A1). The technique that found canvas 15's fix:
+This is the exact situation canvas 17 was blocked on (`hidden_states` unavailable — see
+REMAINING-WORK.md A1); the same technique, extended from `-with-attentions` to `hidden` more
+generally, is what found its fix too. The technique that found canvas 15's fix:
 
 - `https://huggingface.co/api/models/{owner}/{repo}` → `.siblings` lists every file in the repo
   without downloading anything. Look for multiple `.onnx` variants and where they live
@@ -127,3 +147,69 @@ sweeps this way is faster and more reliable than reasoning about the math by han
 models are consistently more surprising than expected (e.g. canvas 15's model tracks which noun
 is more *salient*/first-mentioned far more than it tracks adjective semantics — an assumption
 that would have shipped a wrong hint if asserted from first principles instead of measured).
+
+This applies to level *thresholds*, not just hints — a level authored before its model was
+available (blocked on A1, or just built ahead of verification) can ship thresholds nobody ever
+checked. Canvas 17's shipped defaults for two of its three levels turned out to already score a
+perfect 3 stars with zero player interaction, because the "good" configuration reproduced the raw
+captured data almost exactly — not obvious from reading the engine, only from actually running it
+against real numbers and checking whether the *default* state already passes. If it does, there's
+nothing for the level to teach.
+
+## 6. Loading a model whose repo is missing config.json/tokenizer, or splits weights into external data
+
+Found unblocking canvas 17 (`yaww85/all-MiniLM-L6-v2-hidden-states-exposed-v1`) — two gotchas that
+don't show up on any model already wired into this repo, so nothing existing hints at them:
+
+- **No `config.json` in the repo at all**, just the ONNX graph and maybe a `vocab.txt`.
+  `AutoModel`/`AutoTokenizer.from_pretrained(id, ...)` both fail immediately trying to fetch it —
+  `Could not locate file: ".../config.json"`. Confirm the raw graph actually has what's needed
+  first (§2's `onnxruntime-node` check, no config required for that). If it does, and the repo is
+  a re-export of a model already used elsewhere in this app (check `base_model` in the HF repo's
+  card, or match its `vocab.txt`/tokenizer against a known repo), borrow config and tokenizer from
+  that base id instead of the weights-only repo:
+  ```ts
+  const config = await AutoConfig.from_pretrained('Xenova/all-MiniLM-L6-v2'); // the real base model
+  const tokenizer = await AutoTokenizer.from_pretrained('Xenova/all-MiniLM-L6-v2');
+  const model = await AutoModel.from_pretrained('yaww85/...', { config, subfolder: '' } as any); // weights-only repo
+  ```
+- **Weights split into a separate external-data file** (`model.onnx` + `model.onnx.data` — the
+  standard ONNX format for anything over the old 2GB single-file limit; some conversion scripts use
+  it unconditionally even for a 90MB model). transformers.js has its own automatic external-data
+  fetch, but it only recognises **its own naming convention** (`<name>_data`, `<name>_data_1`, ...)
+  — a plain `<name>.data` file (what `onnx.save_model(..., save_as_external_data=True)` actually
+  produces) is invisible to it, and the load fails deep inside onnxruntime with a
+  filesystem/network error that gives no hint the fix is one option away. Fix: pass the second file
+  explicitly through `session_options.externalData` — this still routes through transformers.js's
+  own `getModelFile`, so it gets real browser-cache and progress-callback behaviour, not a
+  hand-rolled fetch outside the app's normal loading path:
+  ```ts
+  const model = await AutoModel.from_pretrained(id, {
+    config, subfolder: '', dtype: 'fp32',
+    session_options: { externalData: [{ path: 'model.onnx.data', data: 'model.onnx.data' }] },
+  } as any);
+  ```
+  Verify this pattern all the way through — a real forward pass in a Node script *and* in an
+  actual Playwright-driven browser — before trusting it. The Node/browser split that caused canvas
+  15's `dtype` default to only fail in the browser (see A1 in REMAINING-WORK.md) is reason enough
+  not to assume Node success carries over.
+
+## 7. `ModelGate`'s `load` prop never fires without a `modelId`
+
+Only matters once a single canvas has to serve levels with genuinely different model needs — the
+first time that came up was canvas 18, where levels 1–2 are pure maths and level 3 needs
+`embeddingModel`. `ModelGate`'s own effect that calls `load` is gated on `if (!modelId) return`,
+so passing `modelId={null}` (the documented way every World 2/3 canvas skips the gate, because
+their `initState` is synchronous and never goes through `load` in the first place) means **`load`
+is never invoked at all** for whichever levels get `null`. Those levels silently never call
+`prepare()`/`initState()` — `state` stays `null` forever, and nothing renders. No error, no stuck
+spinner, just a blank board, which makes it look like a data problem rather than a wiring one.
+
+Fix: call `load()` directly from a `useEffect` in the top-level canvas component whenever the
+current level doesn't need the gate, and let `ModelGate` handle the levels that do:
+```ts
+const needsModel = config.mode === 'combine-with-embeddings';
+useEffect(() => { if (!needsModel) void load(); }, [needsModel, load]);
+return <ModelGate modelId={needsModel ? EMBEDDING_MODEL_ID : null} load={load}>...</ModelGate>;
+```
+Worth checking first in any future chapter whose levels don't all need the same model.

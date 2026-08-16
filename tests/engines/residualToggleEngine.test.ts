@@ -265,9 +265,21 @@ describe('residualToggleEngine — minimise drift', () => {
     expect(result.value).toBeGreaterThan(result.breakdown.drift!);
   });
 
-  it('leaves a healthy configuration unpenalised', async () => {
+  it('starts with no collapse penalty, but a genuine deficit the player has to fix', async () => {
+    // The shipped level deliberately starts at a normEpsilon far larger than any
+    // real transformer would use, so there's something to tune — not collapsed
+    // (no penalty), but not passing yet either.
     const prepared = await prepare(config, { hiddenStates: fakeHiddenStates });
     const state = initState(config, rulesFor(2), prepared);
+    const result = evaluate(state);
+    expect(result.breakdown.collapsePenalty).toBe(0);
+    expect(result.passed).toBe(false);
+  });
+
+  it('passes once epsilon is tuned back down toward a realistic value', async () => {
+    const prepared = await prepare(config, { hiddenStates: fakeHiddenStates });
+    let state = initState(config, rulesFor(2), prepared);
+    state = applyAction(state, { type: 'SET_NORM_EPSILON', value: 1e-5 });
     const result = evaluate(state);
     expect(result.breakdown.collapsePenalty).toBe(0);
     expect(result.passed).toBe(true);

@@ -1,9 +1,9 @@
 /**
- * Real attention weights and hidden states from a small transformer.
+ * Real attention weights from a small transformer.
  *
- * This is what Worlds 5.2 to 5.4 are built on. The model is loaded with
- * `output_attentions` and `output_hidden_states` so the tensors the chapters
- * visualise are the ones the forward pass actually produced.
+ * This is what Worlds 5.2 and 5.3 are built on. The model is loaded with
+ * `output_attentions` so the tensors the chapters visualise are the ones the
+ * forward pass actually produced.
  *
  * `Xenova/distilbert-base-uncased` (the model this was originally built
  * against — see plan-docs A1) turned out not to work: its ONNX export was
@@ -14,11 +14,11 @@
  * 12 heads — the same layer/head count the original config assumed) whose
  * graph was built with `output_attentions: true`, verified by actually
  * running it: it returns real `attention_1..attention_6` tensors. It has no
- * `hidden_states` output, so `hiddenStateModel` below still throws for it —
- * genuinely absent from the graph, not a bug — which blocks 5.4 until that
- * chapter finds a different export.
+ * `hidden_states` output — only `last_hidden_state` (the final layer) — so
+ * World 5.4 (which needs the full per-layer stack) is served by a different
+ * model entirely; see `./hiddenStateModel.ts`.
  */
-import type { AttentionDep, AttentionResult, HiddenStateDep, HiddenStateResult } from '@/engines/deps';
+import type { AttentionDep, AttentionResult } from '@/engines/deps';
 import { loadOnce, toNestedArray } from './transformersRuntime';
 
 export const ATTENTION_MODEL_ID = 'Qdrant/all_miniLM_L6_v2_with_attentions';
@@ -52,13 +52,12 @@ async function getModel(): Promise<LoadedAttentionModel> {
           // fp32 is what makes this the one wrapper that has to say so.
           dtype: 'fp32',
           progress_callback: onProgress,
-          // transformers.js surfaces attention and hidden-state tensors only
-          // when the ONNX graph exports them; these flags are read from the
-          // config rather than the load options, so they are not in the public
-          // option type. Passing them through is the supported way to ask.
+          // transformers.js surfaces attention tensors only when the ONNX
+          // graph exports them; this flag is read from the config rather than
+          // the load options, so it is not in the public option type. Passing
+          // it through is the supported way to ask.
           ...({
             output_attentions: true,
-            output_hidden_states: true,
             // This repo's model.onnx sits at the repo root, not the usual
             // onnx/ subfolder transformers.js defaults to.
             subfolder: '',
@@ -132,27 +131,6 @@ export const attentionModel: AttentionDep = {
     });
 
     return { tokens, attention };
-  },
-};
-
-export const hiddenStateModel: HiddenStateDep = {
-  async hiddenStates(sentence: string): Promise<HiddenStateResult> {
-    const { tokens, outputs } = await runForward(sentence);
-    const layers = collectLayers(outputs, ['hidden_states', 'hidden_state']);
-
-    if (layers.length === 0) {
-      throw new Error(
-        'The model returned no hidden states — it was not loaded with output_hidden_states'
-      );
-    }
-
-    // [batch][token][dimension] per layer; batch dropped.
-    const hiddenStates = layers.map((layer) => {
-      const nested = toNestedArray(layer) as unknown as number[][][];
-      return (nested[0] ?? []) as number[][];
-    });
-
-    return { tokens, hiddenStates };
   },
 };
 

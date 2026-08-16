@@ -152,7 +152,8 @@ describe('registry against the shipped curriculum', () => {
     const ids = downloads.map((d) => d.modelId);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain('Xenova/all-MiniLM-L6-v2');
-    expect(ids).toContain('Xenova/distilbert-base-uncased');
+    expect(ids).toContain('Qdrant/all_miniLM_L6_v2_with_attentions');
+    expect(ids).toContain('yaww85/all-MiniLM-L6-v2-hidden-states-exposed-v1');
     expect(totalDownloadSizeMB()).toBeGreaterThan(0);
   });
 });

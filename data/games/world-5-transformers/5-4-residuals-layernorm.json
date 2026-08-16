@@ -11,8 +11,8 @@
   },
   "modelRequirement": {
     "tier": "browser-heavy",
-    "modelId": "Xenova/distilbert-base-uncased",
-    "estimatedSizeMB": 67,
+    "modelId": "yaww85/all-MiniLM-L6-v2-hidden-states-exposed-v1",
+    "estimatedSizeMB": 90,
     "fallbackMessage": null,
     "loadFailureMessage": "The transformer could not be downloaded, so per-layer hidden states cannot be read. Check your connection and retry — it works offline once cached."
   },
@@ -44,7 +44,12 @@
         { "threshold": 0.15, "stars": 2 },
         { "threshold": 0.08, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "This trace has both the residual path and layer norm on — the same combination every real trained transformer ships with. Think about what layer norm's job actually is before guessing how much the numbers move.",
+        "Layer norm rescales every token's activations to a consistent statistic at every single layer, so with it on the trace should barely move across depth at all — not grow, not shrink.",
+        "For this sentence, the measured L2 norm sits at essentially 19.6 at every one of the 7 layers (the embedding output included) — that's sqrt(384), the model's hidden size, which is exactly what a properly layer-normalised representation should measure. Guess about 19.6 for every round."
+      ]
     },
     {
       "id": "5-4-l2",
@@ -58,7 +63,7 @@
         "layerCount": 7,
         "residual": false,
         "layerNorm": false,
-        "stableBand": [0.5, 2],
+        "stableBand": [0.85, 1.15],
         "traceMetric": "l2norm"
       },
       "passCriteria": {
@@ -71,7 +76,12 @@
         { "threshold": 0.85, "stars": 2 },
         { "threshold": 0.95, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "Start by looking at the number with both mechanisms off — it's as unstable as this stack gets. Then flip them on one at a time and watch which one actually pulls it into a tight band.",
+        "Residual alone (layer norm still off) helps, but doesn't fully fix it — the activation magnitude can still swing across layers even when each block's input carries forward. Layer norm is what forces every layer's magnitude back to the same statistic, on its own or combined with the residual path.",
+        "With both off, only 3 of 7 layers land inside the stable band (0.43 — well under the pass mark). Residual alone reaches 6 of 7 (0.857, 2 stars). Turning layer norm on — with or without the residual path — puts all 7 layers in band for a perfect 1.0."
+      ]
     },
     {
       "id": "5-4-l3",
@@ -87,23 +97,28 @@
         "layerNorm": true,
         "residualScale": 1,
         "residualScaleRange": [0, 2],
-        "normEpsilon": 0.00001,
-        "normEpsilonRange": [0.0000001, 0.1],
+        "normEpsilon": 2,
+        "normEpsilonRange": [0.0000001, 10],
         "minRepresentationVariance": 0.05,
         "traceMetric": "l2norm",
         "allowUserSentence": true
       },
       "passCriteria": {
         "metric": "activationDrift",
-        "threshold": 0.3,
+        "threshold": 0.09,
         "comparator": "lte"
       },
       "starsRules": [
-        { "threshold": 0.3, "stars": 1 },
-        { "threshold": 0.18, "stars": 2 },
-        { "threshold": 0.1, "stars": 3 }
+        { "threshold": 0.09, "stars": 1 },
+        { "threshold": 0.02, "stars": 2 },
+        { "threshold": 0.001, "stars": 3 }
       ],
-      "xpReward": 65
+      "xpReward": 65,
+      "hints": [
+        "The starting normalisation epsilon is much larger than any real transformer would use — that's exactly what's driving the drift up. Try dragging it down, a couple of orders of magnitude at a time.",
+        "Don't chase a lower number by dragging the residual scale toward zero. Collapsing the representation to near-nothing is measured and penalised separately from drift, and that penalty is far larger than any drift you'd save.",
+        "On the shipped sentence, the starting epsilon of 2 gives drift ≈ 0.097 — already failing. Epsilon 0.01 brings it to ≈ 0.006 (2 stars). Epsilon 0.00001, a realistic value for a real transformer, brings it to ≈ 0.000007 — a clean 3 stars. Leave the residual scale at 1."
+      ]
     }
   ]
 }

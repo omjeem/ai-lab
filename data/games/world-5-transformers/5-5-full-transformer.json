@@ -12,9 +12,9 @@
   "modelRequirement": {
     "tier": "browser-heavy",
     "modelId": "Xenova/gpt2",
-    "estimatedSizeMB": 124,
+    "estimatedSizeMB": 251,
     "fallbackMessage": null,
-    "loadFailureMessage": "GPT-2 could not be downloaded, so the end-to-end forward pass cannot run. It is roughly 124MB — check your connection and storage, then retry. It runs offline once cached."
+    "loadFailureMessage": "GPT-2 could not be downloaded, so the end-to-end forward pass cannot run. It is roughly 251MB — check your connection and storage, then retry. It runs offline once cached."
   },
   "xpReward": 190,
   "unlockRequires": ["5-4-residuals-layernorm"],
@@ -54,7 +54,12 @@
         { "threshold": 0.9, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Tokens have to exist and be turned into vectors before anything numeric can happen to them — start with tokenize and embed, then work out what has to happen before attention can mix information across positions at all.",
+        "Attention needs a query, key and value before it can attend to anything, and its output gets added back to what came in (a residual) and normalised before the feed-forward layer touches it. That add-then-normalise pattern happens a second time after the feed-forward layer, then the block is done.",
+        "Verified order: tokenize, embed, positional-encoding, qkv-projection, attention, residual-add-1, layer-norm-1, feed-forward, residual-add-2, layer-norm-2, unembed, softmax."
+      ]
     },
     {
       "id": "5-5-l2",
@@ -93,7 +98,12 @@
         { "threshold": 0.87, "stars": 2 },
         { "threshold": 1, "stars": 3 }
       ],
-      "xpReward": 55
+      "xpReward": 55,
+      "hints": [
+        "Four stages are missing. Two of them are the 'add the input back' steps that appear right after attention and right after the feed-forward layer — the residual connections.",
+        "positional-encoding has to land between embed and qkv-projection, or every position looks identical to attention. softmax is marked critical here — it's what turns raw scores into next-token probabilities — so leaving it out costs double what a merely-missing layer-norm does.",
+        "Verified: the missing stages are positional-encoding (right after embed), residual-add-1 (right after attention), layer-norm-2 (right after the second residual add) and softmax (the very last stage, after unembed)."
+      ]
     },
     {
       "id": "5-5-l3",
@@ -133,7 +143,12 @@
         { "threshold": 0.8, "stars": 2 },
         { "threshold": 0.94, "stars": 3 }
       ],
-      "xpReward": 90
+      "xpReward": 90,
+      "hints": [
+        "The given prompt's real top-5 is genuinely close together, not a case with one obvious answer — read the actual percentages once they're shown rather than guessing from intuition. All three rounds count toward the score and an unanswered round scores as wrong, so add and answer all of them before submitting.",
+        "Verified against the real model for \"The first rule of debugging is to\": the renormalised top-5 is make 23.1%, use 20.4%, find 20.4%, be 18.0%, not 18.0% — the real top token is 'make', with 'use' and 'find' tied close behind at this model's precision.",
+        "For your own rounds, a confident prompt is easier to call than the default one: \"I think therefore I\" verifies to am 30.1%, should 20.7%, 'm 19.4%, have 17.2%, can 12.6% — a clear, wide leader, unlike the default prompt's close race."
+      ]
     }
   ]
 }

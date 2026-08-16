@@ -26,13 +26,30 @@ async function loadCausalLM(modelId: string, sizeMB: number): Promise<LoadedCaus
     `causal-lm:${modelId}`,
     { modelId, estimatedSizeMB: sizeMB },
     async ({ transformers, backend, onProgress }) => {
+      // Xenova/gpt2 needs a different dtype than SmolLM2. Every quantized
+      // export this repo ships — model_quantized.onnx (404, doesn't exist),
+      // model_int8/uint8.onnx, and decoder_model_merged_quantized.onnx (found
+      // via an explicit model_file_name override) — fails session creation in
+      // the browser's WASM execution provider with the same real error:
+      // "Can't create a session... TransposeDQWeightsForMatMulNBits Missing
+      // required scale: transformer.wte.weight_merged_0_scale". This repo's
+      // conversion applies blockwise N-bit quantization to the token
+      // embedding specifically, which this onnxruntime-web version can't
+      // load, regardless of which quantized file is picked — reproduced
+      // directly in a real browser, not just inferred. Plain `dtype: 'fp32'`
+      // works (verified) but is ~500MB; `fp16` is a pure precision cast with
+      // no quantize/dequantize nodes at all, so it sidesteps the bug and
+      // lands at a real ~251MB instead — used on every backend rather than
+      // the usual webgpu-gets-q4 split, since GPT-2 has no working quantized
+      // variant to fall back to at all.
+      const isGpt2 = modelId === GPT2_MODEL_ID;
       const [tokenizer, model] = await Promise.all([
         transformers.AutoTokenizer.from_pretrained(modelId, { progress_callback: onProgress }),
         transformers.AutoModelForCausalLM.from_pretrained(modelId, {
           device: backend,
-          dtype: backend === 'webgpu' ? 'q4' : 'q8',
+          dtype: isGpt2 ? 'fp16' : backend === 'webgpu' ? 'q4' : 'q8',
           progress_callback: onProgress,
-        }),
+        } as Parameters<typeof transformers.AutoModelForCausalLM.from_pretrained>[1]),
       ]);
       return { tokenizer, model } as unknown as LoadedCausalLM;
     }

@@ -104,6 +104,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./5-4-residuals-layernorm/ResidualCanvas').then((m) => m.ResidualCanvas),
     { ssr: false, loading }
   ),
+  '5-5-full-transformer': dynamic(
+    () => import('./5-5-full-transformer/FullTransformerCanvas').then((m) => m.FullTransformerCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

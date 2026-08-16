@@ -88,6 +88,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./4-3-sampling-strategies/SamplingCanvas').then((m) => m.SamplingCanvas),
     { ssr: false, loading }
   ),
+  '5-1-positional-encoding': dynamic(
+    () => import('./5-1-positional-encoding/PositionalEncodingCanvas').then((m) => m.PositionalEncodingCanvas),
+    { ssr: false, loading }
+  ),
   '5-2-self-attention': dynamic(
     () => import('./5-2-self-attention/SelfAttentionCanvas').then((m) => m.SelfAttentionCanvas),
     { ssr: false, loading }

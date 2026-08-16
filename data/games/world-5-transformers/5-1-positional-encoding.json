@@ -44,7 +44,12 @@
         { "threshold": 0.75, "stars": 2 },
         { "threshold": 0.95, "stars": 3 }
       ],
-      "xpReward": 35
+      "xpReward": 35,
+      "hints": [
+        "Compare the mystery stripe against the candidate rows highlighted in the reference heatmap below it — this is a matching task, not something to compute by hand.",
+        "Low dimensions (the left side of the stripe) oscillate fastest, so they're the most sensitive to small position changes. High dimensions on the right barely change between neighbouring positions, which is why nearby positions are so easy to confuse and distant ones aren't.",
+        "For this seed, the six rounds' real positions in order are 23, 5, 25, 26, 13, 15 — matched by comparing the fast-oscillating left dimensions first, since they disambiguate nearby candidates fastest."
+      ]
     },
     {
       "id": "5-1-l2",
@@ -71,7 +76,12 @@
         { "threshold": 0.72, "stars": 2 },
         { "threshold": 0.84, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Push the base as low as it goes first, then raise the dimension count — a small base is what lets extra dimensions carry genuinely different frequencies instead of all crawling at nearly the same rate.",
+        "More dimensions isn't free: at base 100000, 128 dimensions actually scores worse than 4 (0.294 vs 0.509) because most of them oscillate too slowly to vary at all over 64 positions and just add redundant, near-identical columns. At base 10, 128 dimensions beats 4 by a wide margin (0.848 vs 0.610) because every one of them now carries a genuinely different frequency.",
+        "dModel = 64 with base = 10 (the range's own minimum) measures 0.8495 — just past the 3-star line. That's a real ceiling for this maxPosition, not an arbitrary round number: 128 dimensions at base 10 actually measures very slightly lower, 0.8480."
+      ]
     },
     {
       "id": "5-1-l3",
@@ -95,15 +105,20 @@
       },
       "passCriteria": {
         "metric": "divergenceEstimateError",
-        "threshold": 0.18,
+        "threshold": 0.03,
         "comparator": "lte"
       },
       "starsRules": [
-        { "threshold": 0.18, "stars": 1 },
-        { "threshold": 0.11, "stars": 2 },
-        { "threshold": 0.055, "stars": 3 }
+        { "threshold": 0.03, "stars": 1 },
+        { "threshold": 0.015, "stars": 2 },
+        { "threshold": 0.008, "stars": 3 }
       ],
-      "xpReward": 50
+      "xpReward": 50,
+      "hints": [
+        "All three real divergences are small — none reach even 0.09 — because only one word moves in each pair and cosine similarity is bounded. Guessing the same middling number for all three gets you close in aggregate but won't separate the pairs from each other.",
+        "The size of the divergence tracks how far the moved word travels, not the sentence's meaning: \"only\" shifting by a single slot changes much less than \"dog\"/\"man\" swapping across the whole clause. Raising the scale slider past ~1 barely moves any of the numbers further — the effect saturates quickly.",
+        "At the default scale (1): \"the dog bit the man\" vs \"the man bit the dog\" diverges about 0.086 (the biggest jump — a 3-position move); \"only she told him that\" vs \"she told only him that\" about 0.025 (the smallest — a 1-position move); \"rain before sunset\" vs \"sunset before rain\" about 0.047."
+      ]
     }
   ]
 }

@@ -92,6 +92,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./5-2-self-attention/SelfAttentionCanvas').then((m) => m.SelfAttentionCanvas),
     { ssr: false, loading }
   ),
+  '5-3-multi-head-attention': dynamic(
+    () => import('./5-3-multi-head-attention/MultiHeadCanvas').then((m) => m.MultiHeadCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

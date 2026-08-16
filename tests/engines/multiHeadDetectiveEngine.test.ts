@@ -175,6 +175,22 @@ describe('multiHeadDetectiveEngine — find behaviour', () => {
     state = applyAction(state, { type: 'SET_LAYER', value: 99 });
     expect(state.layer).toBe(config.layerRange![1]);
   });
+
+  it('discards nominations when the layer changes, rather than re-grading them against the new layer', async () => {
+    const prepared = await prepare(config, { attention: fakeAttention });
+    let state = initState(config, rulesFor(0), prepared);
+    for (let i = 0; i < config.rounds!; i++) {
+      state = applyAction(state, { type: 'NOMINATE_HEAD', roundIndex: i, head: state.targetHeads[0]! });
+    }
+    expect(evaluate(state).value).toBeCloseTo(1);
+
+    // Only looking at another layer must not silently flip an already-correct
+    // score — the old nominations are meaningless against a different layer's
+    // heads, so they should be cleared, not re-graded.
+    state = applyAction(state, { type: 'SET_LAYER', value: state.layer === 0 ? 1 : 0 });
+    expect(state.nominations.every((n) => n === null)).toBe(true);
+    expect(evaluate(state).value).toBe(0);
+  });
 });
 
 describe('multiHeadDetectiveEngine — classify all', () => {

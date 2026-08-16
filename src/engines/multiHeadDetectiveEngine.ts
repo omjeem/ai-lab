@@ -251,6 +251,17 @@ export function applyAction(
       return bump({
         layer,
         heads,
+        // A nomination is a head *index*, not tied to any layer, so without this
+        // an old nomination silently gets re-graded against the new layer's
+        // targetHeads the moment the slider moves — a player who answered
+        // correctly, then only looked at another layer, would see their score
+        // drop with no action against the actual rounds. classify-all doesn't
+        // need the same treatment: `heads` is rebuilt fresh above, which already
+        // wipes every `answer` since it lives on the head object itself.
+        nominations:
+          state.mode === 'find-behaviour'
+            ? new Array<number | null>(state.nominations.length).fill(null)
+            : state.nominations,
         targetHeads: state.config.targetBehaviour
           ? heads.filter((h) => h.behaviour === state.config.targetBehaviour).map((h) => h.head)
           : [],

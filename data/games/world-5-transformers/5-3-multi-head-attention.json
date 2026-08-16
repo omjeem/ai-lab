@@ -11,8 +11,8 @@
   },
   "modelRequirement": {
     "tier": "browser-heavy",
-    "modelId": "Xenova/distilbert-base-uncased",
-    "estimatedSizeMB": 67,
+    "modelId": "Qdrant/all_miniLM_L6_v2_with_attentions",
+    "estimatedSizeMB": 87,
     "fallbackMessage": null,
     "loadFailureMessage": "The transformer could not be downloaded, so per-head attention cannot be extracted. Check your connection and retry — cached models work offline."
   },
@@ -28,7 +28,7 @@
       "engineConfig": {
         "mode": "find-behaviour",
         "sentence": "the quiet librarian returned the overdue book yesterday morning",
-        "layer": 3,
+        "layer": 0,
         "layerRange": [0, 5],
         "headCount": 12,
         "targetBehaviour": "previous-token",
@@ -45,7 +45,12 @@
         { "threshold": 0.66, "stars": 1 },
         { "threshold": 0.99, "stars": 3 }
       ],
-      "xpReward": 45
+      "xpReward": 45,
+      "hints": [
+        "Look at layer 0 first. Earlier layers are where raw positional patterns like \"attend to the previous token\" tend to show up most cleanly, before later layers drift toward delimiter-heavy attention.",
+        "A previous-token head's matrix has weight concentrated one cell to the left of the diagonal in almost every row. Scan the twelve mini-matrices for that stripe rather than reading the numbers.",
+        "At layer 0, head 2 attends to the immediately preceding token with about 0.83 average weight, and it's the only head at that layer classified previous-token — every other head is diffuse. Nominate head 2 in all three rounds for a perfect score."
+      ]
     },
     {
       "id": "5-3-l2",
@@ -73,7 +78,12 @@
         { "threshold": 0.72, "stars": 2 },
         { "threshold": 0.85, "stars": 3 }
       ],
-      "xpReward": 55
+      "xpReward": 55,
+      "hints": [
+        "Not every head has a clean label. Heads whose top two behaviour scores are close together are excluded from grading entirely — this level's margin is 0.12, so spend your effort on the heads with an unambiguous pattern rather than guessing on borderline ones.",
+        "A delimiter head lights up a whole column at [CLS] or [SEP] no matter which row (query) you look at. A diffuse head has no strong single pattern — weight spread out fairly evenly across the row.",
+        "At layer 2, 7 of the 12 heads are gradable: heads 0, 4, 7, 9 and 11 are delimiter specialists; heads 6 and 10 are diffuse. Heads 1, 2, 3, 5 and 8 fall below the confidence margin and aren't graded either way. Labelling those 7 correctly scores a perfect 1.0."
+      ]
     },
     {
       "id": "5-3-l3",
@@ -103,7 +113,12 @@
         { "threshold": 0.75, "stars": 2 },
         { "threshold": 0.9, "stars": 3 }
       ],
-      "xpReward": 70
+      "xpReward": 70,
+      "hints": [
+        "The default sentence hides a subject-verb pair split by a relative clause: \"the keys that the neighbour returned last week are still on the table.\" The verb \"are\" has to agree with \"keys\", many tokens earlier — that split is the long-range dependency to hunt for.",
+        "Attention isn't symmetric — the direction you probe matters, and the answer isn't always in the layer you start on. Probe from the later token back to the earlier one, and move the layer slider since the search spans every layer, not just the one shown.",
+        "Probing from \"are\" (token 9) back to \"keys\" (token 2) at layer 3, head 1 finds a weight of 0.896 — the strongest link for that pair anywhere in the model, so it scores a perfect 1.0."
+      ]
     }
   ]
 }

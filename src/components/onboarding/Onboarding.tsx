@@ -74,8 +74,7 @@ export function Onboarding() {
           to cause real trouble later, so it is stated plainly and briefly.
         */}
         <p className="mt-6 text-[11px] leading-relaxed text-muted">
-          We track anonymous play activity, including approximate location and device details, to
-          improve this tool.
+          We track anonymous play activity to improve this tool.
         </p>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, LogOut, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, Trash2, X } from 'lucide-react';
 import { Button, Heading, Panel, Readout, Tag, cx } from '@/components/ui';
 import type { AdminUserRow } from '@/types/user';
 import type { ActivityEvent } from '@/types/activity';
@@ -137,14 +137,32 @@ export default function AdminDashboardPage() {
         </div>
       </main>
 
-      {selected && <UserDrilldown user={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <UserDrilldown
+          user={selected}
+          onClose={() => setSelected(null)}
+          onDeleted={() => {
+            setSelected(null);
+            void load(page);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function UserDrilldown({ user, onClose }: { user: AdminUserRow; onClose: () => void }) {
+function UserDrilldown({
+  user,
+  onClose,
+  onDeleted,
+}: {
+  user: AdminUserRow;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
   const [data, setData] = useState<ActivityResponse | null>(null);
   const [page, setPage] = useState(0);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -155,6 +173,31 @@ function UserDrilldown({ user, onClose }: { user: AdminUserRow; onClose: () => v
     })();
   }, [user.userId, page]);
 
+  const deleteUser = async () => {
+    const confirmed = window.confirm(
+      `Permanently delete ${user.name} and all ${user.eventCount} recorded activity events? ` +
+        'This cannot be undone.'
+    );
+    if (!confirmed || deleting) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/users?userId=${encodeURIComponent(user.userId)}`, {
+        method: 'DELETE',
+      });
+      const payload = (await response.json()) as { ok: boolean; error?: string };
+      if (!payload.ok) {
+        window.alert(payload.error ?? 'Could not delete this user');
+        return;
+      }
+      onDeleted();
+    } catch {
+      window.alert('Could not reach the server');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-void/70 backdrop-blur-sm">
       <div className="flex h-full w-full max-w-2xl flex-col border-l border-line bg-panel">
@@ -163,9 +206,15 @@ function UserDrilldown({ user, onClose }: { user: AdminUserRow; onClose: () => v
             <Heading level={3}>{user.name}</Heading>
             <p className="readout mt-1 text-[10px] text-muted">{user.userId}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-1 text-muted hover:text-primary">
-            <X size={16} strokeWidth={2} />
-          </button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => void deleteUser()} variant="danger" disabled={deleting}>
+              <Trash2 size={13} strokeWidth={2} />
+              {deleting ? 'Deleting…' : 'Delete user'}
+            </Button>
+            <button onClick={onClose} aria-label="Close" className="p-1 text-muted hover:text-primary">
+              <X size={16} strokeWidth={2} />
+            </button>
+          </div>
         </header>
 
         <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">

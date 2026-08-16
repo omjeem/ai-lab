@@ -70,3 +70,44 @@ export async function GET(request: Request): Promise<Response> {
     return NextResponse.json({ ok: false, error: 'Query failed' }, { status: 503 });
   }
 }
+
+/**
+ * Deletes a user and every activity event recorded for them.
+ *
+ * Two collections, no transaction: activity is removed first so a failure
+ * partway through never leaves activity orphaned under a deleted user with
+ * no way to find it again.
+ */
+export async function DELETE(request: Request): Promise<Response> {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json({ ok: false, error: 'No database configured' }, { status: 503 });
+  }
+
+  const url = new URL(request.url);
+  const userId = url.searchParams.get('userId');
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: 'userId is required' }, { status: 400 });
+  }
+
+  try {
+    const activity = await activityCollection();
+    const users = await usersCollection();
+
+    const { deletedCount: deletedActivity } = await activity.deleteMany({ userId });
+    const { deletedCount: deletedUsers } = await users.deleteOne({ userId });
+
+    if (deletedUsers === 0) {
+      return NextResponse.json({ ok: false, error: 'User not found' }, { status: 404 });
+    }
+
+    return refreshSession(
+      NextResponse.json({ ok: true, deletedUsers, deletedActivity }),
+      auth.session
+    );
+  } catch {
+    return NextResponse.json({ ok: false, error: 'Delete failed' }, { status: 503 });
+  }
+}

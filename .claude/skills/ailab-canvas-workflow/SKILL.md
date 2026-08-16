@@ -1,12 +1,14 @@
 ---
 name: ailab-canvas-workflow
-description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json or splitting weights into external data), a general engine-correctness check for any canvas with a live-adjustable parameter, and a ModelGate trap specific to canvases whose levels don't all need the same model. Load this before building canvas 19 or later, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
+description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json, splitting weights into external data, or failing session creation only in onnxruntime-web's WASM backend), a general engine-correctness check for any canvas with a live-adjustable parameter, a ModelGate trap specific to canvases whose levels don't all need the same model, and what to do when a chapter needs WebGPU and this environment can't reliably provide it. Load this before touching any World 5/6 canvas, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
 ---
 
 # AI Learning Lab canvas workflow
 
-Process notes from building canvases 14 through 18, specifically the parts that cost real time
-and aren't in `plan-docs/REMAINING-WORK.md` (which covers per-chapter findings, not tooling).
+Process notes from building canvases 14 through 20 — all 22 chapters are now built — specifically
+the parts that cost real time and aren't in `plan-docs/REMAINING-WORK.md` (which covers
+per-chapter findings, not tooling). Still worth reading before *revisiting* any canvas: the same
+model-loading and verification traps apply to fixes as much as to first builds.
 
 ## 1. Verifying a canvas in a real browser (Playwright)
 
@@ -213,3 +215,75 @@ useEffect(() => { if (!needsModel) void load(); }, [needsModel, load]);
 return <ModelGate modelId={needsModel ? EMBEDDING_MODEL_ID : null} load={load}>...</ModelGate>;
 ```
 Worth checking first in any future chapter whose levels don't all need the same model.
+
+## 8. A quantized ONNX file can load fine under Node and still fail in the browser's WASM backend
+
+Found unblocking canvas 19 (`Xenova/gpt2`, `gpt2CausalLM`). Every quantized variant of this repo —
+`model_quantized.onnx` (404, doesn't even exist), `model_int8.onnx`, `model_uint8.onnx`, and
+`decoder_model_merged_quantized.onnx` (reachable via an explicit `model_file_name` override) — fails
+`InferenceSession.create` in a real browser with the exact same error:
+
+```
+Can't create a session. ERROR_CODE: 1, ERROR_MESSAGE: qdq_actions.cc:137
+TransposeDQWeightsForMatMulNBits Missing required scale: transformer.wte.weight_merged_0_scale
+```
+
+**This only reproduces in an actual browser (Playwright, not headless-shell-only — regular
+`chromium.launch()` reproduces it fine).** A plain Node script loading the identical file via
+`onnxruntime-node` runs it without complaint — Node and onnxruntime-web are different runtimes with
+different execution-provider code, so a "verified working in Node" check (§2) does **not** clear a
+model for browser use once quantization is involved. This repo's conversion applies blockwise N-bit
+quantization to the token-embedding weight specifically, in a way this onnxruntime-web version's WASM
+EP can't resolve, regardless of which quantized file is picked. If a model's quantized variant throws
+a `TransposeDQWeightsForMatMulNBits`/similar QDQ error only in the browser: don't chase a different
+quantized file, they likely all carry the same weight-quantization scheme. Fall back to a dtype with
+no quantize/dequantize nodes at all — `fp16` (a pure precision cast) is usually much smaller than
+`fp32` and sidesteps the whole class of bug:
+```ts
+await transformers.AutoModelForCausalLM.from_pretrained(modelId, { dtype: 'fp16', device: backend });
+```
+Also worth knowing regardless of whether this bug is in play: `dtype` and the file it actually
+requests are two different questions. `dtype: 'q8'` maps to a `_quantized` filename suffix; if you
+need a *specific* file the repo ships under a different base name (e.g. `decoder_model_merged*.onnx`,
+the merged KV-cache graph, versus the default `model*.onnx`), pass `model_file_name` explicitly:
+```ts
+await transformers.AutoModelForCausalLM.from_pretrained(modelId, {
+  dtype: 'q8', model_file_name: 'decoder_model_merged',
+} as any); // not in the public option type, same category as §3's output_attentions flag
+```
+Check `https://huggingface.co/api/models/{owner}/{repo}` → `.siblings` for the real filenames and
+their real sizes (`curl -sIL .../resolve/main/onnx/<file>` → `content-length`) before picking a
+dtype — the declared `estimatedSizeMB` in a chapter's JSON is sometimes a guess from before the model
+was actually loaded successfully, and can be off by 2–4×.
+
+## 9. This environment cannot reliably provide WebGPU — don't build a canvas's verification plan around it
+
+Found while building canvas 20 (`webllmCapstone`, WebLLM, needs `navigator.gpu`). Checked thoroughly
+before concluding this, not assumed: `navigator.gpu` is `undefined` in Playwright's bundled Chromium,
+in both headless and headed mode, and also in this machine's own real, current, WebGPU-capable
+system Chrome (channel `'chrome'`) launched through Playwright with every relevant flag
+(`--ignore-gpu-blocklist --enable-unsafe-webgpu --use-angle=metal`) — it appeared exactly once,
+transiently, on an internal `chrome://gpu` page load, and was consistently absent on every real page
+otherwise. This reads as a GPU-process/automation-sandboxing limitation of launching Chrome through
+Playwright specifically, not something fixable from application code.
+
+**Consequence for any WebGPU-dependent chapter (currently just World 6): the actual generation
+gameplay cannot be played end-to-end here the way every WASM/CPU-backed canvas in this course was.**
+Don't spend more time chasing browser flags trying to force it — instead:
+- Build the canvas so `isWebLLMSupported()` (or equivalent) is checked *before* `ModelGate` attempts
+  the download, and verify that specific unsupported-browser path for real — it's the one thing about
+  a WebGPU-gated chapter this environment can genuinely exercise, since `isWebLLMSupported()` will
+  honestly return `false` here.
+- Verify everything else that doesn't need the model to actually run: hints, concept panel, layout at
+  375px, dark theme, zero console errors on the unsupported-state screen.
+- Lean harder on the pre-existing engine test suite and a deliberate, careful self-review pass of the
+  component against the engine's contract — this is how canvas 20's two real UI bugs (a dead
+  `useReducedMotion` import driving nothing, and a trace label rendering `local — "local"` instead of
+  the real prompt) were caught without ever running the generation flow live.
+- Say so plainly in `plan-docs/REMAINING-WORK.md`, the same way A4/A5/A6 already document
+  infrastructure that needs a real credential/cluster/network condition this environment doesn't
+  have — don't claim "verified end-to-end in a real browser" for a flow that was never actually run.
+- The cloud side of a chapter (an API route proxying an external key, as opposed to a model needing
+  WebGPU) is a different situation and usually *is* testable — check `.env` for a real key before
+  assuming it isn't; canvas 20's Ollama Cloud round trip was fully exercisable this way even though
+  the local WebLLM half was not.

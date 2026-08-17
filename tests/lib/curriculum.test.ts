@@ -16,7 +16,7 @@ import {
 
 describe('curriculum access', () => {
   it('exposes every chapter', () => {
-    expect(allGames()).toHaveLength(23);
+    expect(allGames()).toHaveLength(24);
     expect(getGame('1-1-vectors')?.chapterTitle).toBe('What is a Vector?');
     expect(getGame('nope')).toBeNull();
   });
@@ -29,16 +29,16 @@ describe('curriculum access', () => {
 
   it('orders chapters for play', () => {
     const ordered = orderedChapters();
-    expect(ordered).toHaveLength(23);
+    expect(ordered).toHaveLength(24);
     expect(ordered[0]!.id).toBe('1-1-vectors');
-    expect(ordered.at(-1)!.id).toBe('7-1-retrieval');
+    expect(ordered.at(-1)!.id).toBe('7-2-grounded-generation');
   });
 
   it('walks to the next chapter, across a world boundary', () => {
     expect(nextChapterAfter('1-1-vectors')?.id).toBe('1-2-vector-arithmetic');
     expect(nextChapterAfter('1-5-probability')?.id).toBe('2-1-perceptron');
     expect(nextChapterAfter('6-1-inspector-chat')?.id).toBe('7-1-retrieval');
-    expect(nextChapterAfter('7-1-retrieval')).toBeNull();
+    expect(nextChapterAfter('7-2-grounded-generation')).toBeNull();
   });
 });
 
@@ -117,7 +117,7 @@ describe('progress summary', () => {
     expect(summary.rank.title).toBe('Gradient Novice');
     expect(summary.chaptersCompleted).toBe(0);
     expect(summary.starsEarned).toBe(0);
-    expect(summary.starsPossible).toBe(69);
+    expect(summary.starsPossible).toBe(72);
   });
 
   it('promotes through the ranks with XP', () => {

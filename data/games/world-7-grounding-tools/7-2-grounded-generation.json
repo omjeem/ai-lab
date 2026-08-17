@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "7-2-grounded-generation",
+  "world": 7,
+  "worldTitle": "Grounding & Tools",
+  "chapterTitle": "Grounded Generation",
+  "order": 2,
+  "concept": {
+    "shortExplanation": "Retrieval only matters if it actually changes what the model says. Grounded generation means putting a retrieved passage directly into the prompt before the model answers — and the tiny language model from Worlds 1 and 4 genuinely reads it: the same question gets a different, more accurate real completion once the right passage is in context. Every completion below is a real greedy decode from the model, read one true next-token at a time, exactly the same forward pass the rest of this course already uses.",
+    "ahaMoment": "A small model does not need to know a fact to state it correctly — it needs the fact in front of it, and enough signal to actually use it. The wrong context can hurt as much as no context at all, which is the entire reason retrieval quality is a real engineering problem and not an afterthought."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 92,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The 135M language model could not be downloaded. It is roughly 90MB — check your connection and available storage, then retry. It runs fully offline once cached."
+  },
+  "xpReward": 135,
+  "unlockRequires": ["7-1-retrieval"],
+  "levels": [
+    {
+      "id": "7-2-l1",
+      "title": "Spot the Grounding",
+      "difficulty": "easy",
+      "instructions": "For each fact below, the model produced two real completions to the same question — one with the passage as context, one without. Pick which side actually had the passage. Both are real, unedited generations.",
+      "engineType": "groundedGeneration",
+      "engineConfig": {
+        "mode": "identify-grounded",
+        "corpus": "retrieval-facts",
+        "maxTokens": 16,
+        "factIds": ["reef", "burj", "venus", "statue-liberty"]
+      },
+      "passCriteria": {
+        "metric": "predictionAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40,
+      "hints": [
+        "The grounded completion has the passage's own words to fall back on, so it tends to state a specific number confidently and stop. The ungrounded completion is guessing from whatever the model already knows, which for a 135M model is often wrong, vague, or trails off into an unrelated sentence.",
+        "Don't just look for 'a number' — look for whether the number matches the kind of fact the question is actually asking about, and whether the sentence reads like it's continuing a passage you can imagine, rather than inventing one.",
+        "Checked directly against the real model: for the Great Barrier Reef question, the grounded side says '2,300 kilometers', the ungrounded side guesses '3,700 kilometers'. For the Burj Khalifa question, grounded reaches '828 meters tall'; ungrounded says 'is 15' and trails off. For Venus, grounded says '243 Earth days'; ungrounded guesses '24 hours'. For the Statue of Liberty, grounded says '93 meters tall from base to torch'; ungrounded guesses '33.3 meters'."
+      ]
+    },
+    {
+      "id": "7-2-l2",
+      "title": "Pick the Passage",
+      "difficulty": "medium",
+      "instructions": "For each of these 3 questions, three passages are offered — only one is genuinely about the question's subject. Choose one, then run the real model on it: you'll see its actual completion, not a prediction.",
+      "engineType": "groundedGeneration",
+      "engineConfig": {
+        "mode": "pick-passage",
+        "corpus": "retrieval-facts",
+        "maxTokens": 20,
+        "rounds": [
+          { "targetFactId": "mariana", "distractorFactIds": ["reef", "amazon"] },
+          { "targetFactId": "burj", "distractorFactIds": ["statue-liberty", "greatwall"] },
+          { "targetFactId": "venus", "distractorFactIds": ["burj", "greatwall"] }
+        ]
+      },
+      "passCriteria": {
+        "metric": "groundedAccuracy",
+        "threshold": 0.34,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.34, "stars": 1 },
+        { "threshold": 0.67, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "hints": [
+        "Read all three candidate passages before picking — only one is actually about the same subject as the question. The other two are real, correct facts about something else entirely, and injecting them will not help.",
+        "An irrelevant passage does not make the model refuse to answer — it usually still states a confident-sounding number, just the wrong one, sometimes pulled from the wrong passage's own facts. Only the genuinely relevant passage reliably produces the real answer.",
+        "Checked directly: for 'how deep is the Mariana Trench', only the Mariana Trench passage reaches '10,935 meters' — the reef passage produces '12,767 meters', the Amazon passage produces '100 meters'. For the Burj Khalifa question, only its own passage reaches '828 meters'. For the Venus question, only its own passage reaches '243 Earth days'."
+      ]
+    },
+    {
+      "id": "7-2-l3",
+      "title": "Curate the Context",
+      "difficulty": "hard",
+      "instructions": "The Mariana Trench passage is the real answer to this question, but a Great Barrier Reef passage has to be included alongside it. Choose the order and how much of the distractor to keep, then test — until the real model's answer is actually correct.",
+      "engineType": "groundedGeneration",
+      "engineConfig": {
+        "mode": "curate-context",
+        "corpus": "retrieval-facts",
+        "maxTokens": 20,
+        "targetFactId": "mariana",
+        "distractorFactId": "reef"
+      },
+      "passCriteria": {
+        "metric": "attemptsToSolve",
+        "threshold": 4,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 4, "stars": 1 },
+        { "threshold": 2, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 50,
+      "hints": [
+        "There are only 4 combinations here: which passage comes first, and whether the distractor is trimmed down or left whole. Try the whole distractor first, in either order, and watch what the model actually does with it.",
+        "A full, untrimmed distractor tends to hijack the model's attention regardless of where you put it — it just keeps talking about the reef instead of answering the question. Trimming the distractor down to a single sentence keeps it present without letting it dominate.",
+        "Checked directly against the real model: the only one of the 4 combinations that reaches '10,935 meters' is the trimmed distractor placed first, with the full Mariana Trench passage placed right before the question — every other arrangement fails."
+      ]
+    }
+  ]
+}

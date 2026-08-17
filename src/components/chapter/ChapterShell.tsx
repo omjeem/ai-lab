@@ -17,6 +17,7 @@ import { nextChapterAfter, worldOfChapter } from '@/lib/curriculum';
 import { useGameProgressStore } from '@/store/useGameProgressStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { enqueueActivity } from '@/lib/offlineQueue';
+import { playChapterCompleteTone, playCorrectTone } from '@/lib/sound';
 import { Button, Heading, Panel, Readout, StarRating, Tag, cx } from '@/components/ui';
 
 export interface GameRenderProps {
@@ -41,6 +42,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
   const userId = useGameProgressStore((s) => s.userId);
   const recordLevel = useGameProgressStore((s) => s.recordLevel);
   const completeChapter = useGameProgressStore((s) => s.completeChapter);
+  const soundEnabled = useGameProgressStore((s) => s.soundEnabled);
 
   const levelIndex = useSessionStore((s) => s.levelIndex);
   const phase = useSessionStore((s) => s.phase);
@@ -84,6 +86,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
           attempts: attempts + 1,
           completedAt: Date.now(),
         });
+        if (soundEnabled) playCorrectTone();
       }
 
       if (userId) {
@@ -102,7 +105,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
         });
       }
     },
-    [level, game.id, userId, attempts, registerAttempt, recordResult, recordLevel]
+    [level, game.id, userId, attempts, soundEnabled, registerAttempt, recordResult, recordLevel]
   );
 
   const advance = useCallback(() => {
@@ -121,6 +124,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
 
     completeChapter(game.id, chapterStars);
     setChapterDone(true);
+    if (soundEnabled) playChapterCompleteTone();
 
     if (userId) {
       void enqueueActivity({
@@ -130,7 +134,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
         detail: { stars: chapterStars },
       });
     }
-  }, [levelIndex, requiredLevels, game.id, userId, goToLevel, completeChapter]);
+  }, [levelIndex, requiredLevels, game.id, userId, soundEnabled, goToLevel, completeChapter]);
 
   if (!level) return null;
 

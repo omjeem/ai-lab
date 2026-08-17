@@ -5,10 +5,11 @@ description: Tooling and debugging workflow for building/verifying AI Learning L
 
 # AI Learning Lab canvas workflow
 
-Process notes from building canvases 14 through 20 — all 22 chapters are now built — specifically
-the parts that cost real time and aren't in `plan-docs/REMAINING-WORK.md` (which covers
-per-chapter findings, not tooling). Still worth reading before *revisiting* any canvas: the same
-model-loading and verification traps apply to fixes as much as to first builds.
+Process notes from building canvases 14 through 20 (all of Worlds 1–6, 22 chapters) plus World 7's
+first two chapters (7-1, 7-2) — specifically the parts that cost real time and aren't in
+`plan-docs/REMAINING-WORK.md` (which covers per-chapter findings for Worlds 1–6) or
+`plan-docs/EXPANSION-PLAN.md` (the same, for World 7/8). Still worth reading before *revisiting* any
+canvas: the same model-loading and verification traps apply to fixes as much as to first builds.
 
 ## 1. Verifying a canvas in a real browser (Playwright)
 

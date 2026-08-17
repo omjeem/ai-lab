@@ -14,7 +14,11 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ArrowLeft, ArrowRight, Lightbulb, RotateCcw } from 'lucide-react';
 import type { GameDefinition, GameLevel, ScoreResult } from '@/types/game';
 import { nextChapterAfter, worldOfChapter } from '@/lib/curriculum';
-import { useGameProgressStore } from '@/store/useGameProgressStore';
+import {
+  useGameProgressStore,
+  type ChapterProgress,
+  type LevelResult,
+} from '@/store/useGameProgressStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { enqueueActivity } from '@/lib/offlineQueue';
 import { playChapterCompleteTone, playCorrectTone } from '@/lib/sound';
@@ -34,6 +38,19 @@ export interface ChapterShellProps {
   children: (props: GameRenderProps) => ReactNode;
 }
 
+/**
+ * Where a returning player picks back up — the first level with no recorded
+ * result yet, so re-opening a chapter never re-plays what is already passed.
+ * Falls back to the last level once every one of them (including any
+ * optional stretch level) has a result, rather than looping back to the
+ * first.
+ */
+function resumeLevelIndex(game: GameDefinition, progress: ChapterProgress | null): number {
+  if (!progress) return 0;
+  const index = game.levels.findIndex((l) => !progress.levels[l.id]);
+  return index === -1 ? game.levels.length - 1 : index;
+}
+
 export function ChapterShell({ game, children }: ChapterShellProps) {
   const reduce = useReducedMotion();
   const world = worldOfChapter(game.id);
@@ -43,6 +60,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
   const recordLevel = useGameProgressStore((s) => s.recordLevel);
   const completeChapter = useGameProgressStore((s) => s.completeChapter);
   const soundEnabled = useGameProgressStore((s) => s.soundEnabled);
+  const completedLevels = useGameProgressStore((s) => s.chapters[game.id]?.levels);
 
   const levelIndex = useSessionStore((s) => s.levelIndex);
   const phase = useSessionStore((s) => s.phase);
@@ -62,8 +80,14 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
 
   useEffect(() => {
     beginChapter(game.id);
+    // A returning player resumes past what they have already cleared, rather
+    // than always landing back on level 1 — the persisted result is the
+    // source of truth here, not the (deliberately unpersisted) session state.
+    const progress = useGameProgressStore.getState().chapterProgress(game.id);
+    const resumeIndex = resumeLevelIndex(game, progress);
+    if (resumeIndex > 0) goToLevel(resumeIndex);
     if (userId) void enqueueActivity({ userId, type: 'chapter_started', chapterId: game.id });
-  }, [game.id, userId, beginChapter]);
+  }, [game, userId, beginChapter, goToLevel]);
 
   // A new level starts with none of its hints shown. Not tied to `phase`, so a
   // retry within the same level keeps whatever the player already unlocked.
@@ -174,6 +198,7 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
           liveScore={liveScore}
           attempts={attempts}
           phase={phase}
+          completedLevels={completedLevels}
           hintsRevealed={hintsRevealed}
           onRevealHint={() =>
             setHintsRevealed((n) => Math.min(n + 1, level.hints?.length ?? 0))
@@ -181,6 +206,10 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
           onRetry={() => {
             setLiveScore(null);
             setPhase('playing');
+          }}
+          onSelectLevel={(index) => {
+            setLiveScore(null);
+            goToLevel(index);
           }}
           onAdvance={advance}
         />
@@ -290,10 +319,12 @@ function Hud({
   liveScore,
   attempts,
   phase,
+  completedLevels,
   hintsRevealed,
   onRevealHint,
   onRetry,
   onAdvance,
+  onSelectLevel,
 }: {
   game: GameDefinition;
   level: GameLevel;
@@ -301,10 +332,14 @@ function Hud({
   liveScore: ScoreResult | null;
   attempts: number;
   phase: string;
+  /** Which of this chapter's levels already have a passing result, keyed by level id. */
+  completedLevels: Record<string, LevelResult> | undefined;
   hintsRevealed: number;
   onRevealHint: () => void;
   onRetry: () => void;
   onAdvance: () => void;
+  /** Jumps straight to an already-cleared level, replaying it. */
+  onSelectLevel: (index: number) => void;
 }) {
   const comparator = level.passCriteria.comparator;
   const target = level.passCriteria.threshold;
@@ -355,20 +390,49 @@ function Hud({
 
       <Panel label="level">
         <ol className="flex flex-col gap-1.5">
-          {game.levels.map((l, index) => (
-            <li
-              key={l.id}
-              className={cx(
-                'flex items-center justify-between gap-2 text-[11px]',
-                index === levelIndex ? 'text-accent' : 'text-muted'
-              )}
-            >
-              <span className="truncate">
-                {index + 1}. {l.title}
-              </span>
-              {l.optional && <Tag>stretch</Tag>}
-            </li>
-          ))}
+          {game.levels.map((l, index) => {
+            const result = completedLevels?.[l.id];
+            const isCurrent = index === levelIndex;
+            const row = (
+              <>
+                <span className="truncate">
+                  {index + 1}. {l.title}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  {result && <StarRating stars={result.stars} size={10} />}
+                  {l.optional && <Tag>stretch</Tag>}
+                </span>
+              </>
+            );
+
+            // Only a level that already has a result is a re-entry point —
+            // this is a replay shortcut, not a way to skip ahead.
+            if (result && !isCurrent) {
+              return (
+                <li key={l.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectLevel(index)}
+                    className="flex w-full items-center justify-between gap-2 text-[11px] text-muted transition-colors hover:text-primary"
+                  >
+                    {row}
+                  </button>
+                </li>
+              );
+            }
+
+            return (
+              <li
+                key={l.id}
+                className={cx(
+                  'flex items-center justify-between gap-2 text-[11px]',
+                  isCurrent ? 'text-accent' : 'text-muted'
+                )}
+              >
+                {row}
+              </li>
+            );
+          })}
         </ol>
       </Panel>
 

@@ -19,28 +19,10 @@ import { manifest } from '@/lib/curriculum';
 import { Heading, Panel, Tag } from '@/components/ui';
 import { HeroActions } from './HeroActions';
 
-const BUILT_CHAPTERS = new Set([
-  '1-1-vectors',
-  '1-2-vector-arithmetic',
-  '1-3-similarity-distance',
-  '1-4-tokenization',
-  '1-5-probability',
-  '2-1-perceptron',
-  '2-2-loss-functions',
-  '2-3-gradient-descent',
-  '2-4-overfitting',
-  '3-1-neurons-activations',
-  '3-2-layers-forward-pass',
-  '3-3-backpropagation',
-  '3-4-training-dynamics',
-  '4-1-ngrams',
-  '4-2-recurrence-memory',
-]);
-
 const PROOF_POINTS = [
   '0 API keys',
   '0 servers in the loop to play',
-  '766 engine tests',
+  '780 engine tests',
   '22 chapters · 6 worlds',
   'works offline after first load',
 ];
@@ -59,7 +41,7 @@ const ARCHITECTURE_MODULES = [
   {
     icon: GitBranch,
     title: 'Engines are pure functions',
-    body: 'Every game is prepare → initState → applyAction → evaluate. An engine never imports a model — one is injected through a deps parameter. That is why the same code path runs 766 tests offline in about a second and drives real inference in the browser, with nothing mocked in between.',
+    body: 'Every game is prepare → initState → applyAction → evaluate. An engine never imports a model — one is injected through a deps parameter. That is why the same code path runs 780 tests offline in about a second and drives real inference in the browser, with nothing mocked in between.',
   },
   {
     icon: Braces,
@@ -238,9 +220,7 @@ function Curriculum() {
           Each world owns one accent color, carried through into the map you&apos;ll actually play
           on. Chapters unlock in order — every arrow below is a real dependency, not a suggestion.
         </p>
-        <p className="label mb-8">
-          bright chip — canvas is live today · dim chip — engine and tests are done, canvas is next
-        </p>
+        <p className="label mb-8">every chapter below is live — open any of them from the map</p>
 
         <div className="flex flex-col gap-8">
           {manifest.worlds.map((world) => {
@@ -264,7 +244,7 @@ function Curriculum() {
 
                 <div className="ml-[22px] flex flex-wrap gap-1.5">
                   {chapters.map((chapter) => (
-                    <Tag key={chapter.id} tone={BUILT_CHAPTERS.has(chapter.id) ? 'accent' : 'neutral'}>
+                    <Tag key={chapter.id} tone="accent">
                       {chapter.title}
                     </Tag>
                   ))}

@@ -8,12 +8,50 @@
  * once their models have been fetched at least once (Section 9 / Phase 9).
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = `ail-shell-${VERSION}`;
 const ASSET_CACHE = `ail-assets-${VERSION}`;
 
+/**
+ * Every chapter route is precached explicitly, not left to `networkFirst`'s
+ * cache-as-you-go behaviour below. A real player always reaches a chapter by
+ * clicking through `/map` — a client-side transition — and Next's RSC fetch
+ * for that transition never arrives here as a `navigate`-mode request, so it
+ * never gets cached as a side effect. Verified for real (A4,
+ * `plan-docs/REMAINING-WORK.md`): without this list, going offline and
+ * reloading a chapter reached that way silently served the cached `/map`
+ * shell instead, under a URL bar that still read the chapter's own path.
+ * Hardcoded rather than read from the manifest at request time — this file
+ * is a plain static asset with no build step of its own — so a 23rd chapter
+ * needs a line added here too.
+ */
+const CHAPTER_URLS = [
+  '/world/1/chapter/1-1-vectors',
+  '/world/1/chapter/1-2-vector-arithmetic',
+  '/world/1/chapter/1-3-similarity-distance',
+  '/world/1/chapter/1-4-tokenization',
+  '/world/1/chapter/1-5-probability',
+  '/world/2/chapter/2-1-perceptron',
+  '/world/2/chapter/2-2-loss-functions',
+  '/world/2/chapter/2-3-gradient-descent',
+  '/world/2/chapter/2-4-overfitting',
+  '/world/3/chapter/3-1-neurons-activations',
+  '/world/3/chapter/3-2-layers-forward-pass',
+  '/world/3/chapter/3-3-backpropagation',
+  '/world/3/chapter/3-4-training-dynamics',
+  '/world/4/chapter/4-1-ngrams',
+  '/world/4/chapter/4-2-recurrence-memory',
+  '/world/4/chapter/4-3-sampling-strategies',
+  '/world/5/chapter/5-1-positional-encoding',
+  '/world/5/chapter/5-2-self-attention',
+  '/world/5/chapter/5-3-multi-head-attention',
+  '/world/5/chapter/5-4-residuals-layernorm',
+  '/world/5/chapter/5-5-full-transformer',
+  '/world/6/chapter/6-1-inspector-chat',
+];
+
 /** Fetched up front so the first offline launch has something to render. */
-const SHELL_URLS = ['/', '/map', '/onboarding', '/manifest.webmanifest', '/icon.svg'];
+const SHELL_URLS = ['/', '/map', '/onboarding', '/manifest.webmanifest', '/icon.svg', ...CHAPTER_URLS];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

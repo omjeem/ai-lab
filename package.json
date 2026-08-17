@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "validate:games": "tsx scripts/validate-games.ts",
     "hash:password": "tsx scripts/hash-password.ts"
   },
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.6",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20.19.43",
     "@types/react": "^19",

@@ -14,18 +14,19 @@ next-token distributions.
 | Layer | State |
 | --- | --- |
 | Curriculum (22 chapters, 67 levels) | Complete, schema-validated |
-| Game logic engines (22) | Complete, 774 tests passing |
+| Game logic engines (22) | Complete, 780 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
 | Per-chapter game canvases | **22 of 22 built** — every chapter, all six worlds |
 | Backend, admin, offline sync, PWA | Complete |
+| Sound design, offline path, Ollama Cloud and MongoDB round trips | Complete, verified for real |
 
-Every chapter's logic, model wrapper and canvas are finished and tested. What remains is the
-handful of infrastructure items in `plan-docs/REMAINING-WORK.md` Part A that need a live
-credential, a real offline run, or a WebGPU-capable browser to exercise — sound design, the
-offline path, the Ollama Cloud and MongoDB round trips. See
-[Adding a chapter's canvas](#adding-a-chapters-canvas) for the pattern, in case any of the 22 need
-revisiting.
+Every chapter's logic, model wrapper and canvas are finished and tested, and every infrastructure
+item in `plan-docs/REMAINING-WORK.md` Part A that needed a live credential or a real offline run
+has now been exercised for real — see that file for what each one found. The one item still open
+needs a WebGPU-capable automated browser this environment cannot provide (canvas 20's live
+playthrough). See [Adding a chapter's canvas](#adding-a-chapters-canvas) for the pattern, in case
+any of the 22 need revisiting.
 
 ---
 
@@ -91,9 +92,10 @@ Paste the line into `.env.local`. The script refuses passwords under 12 characte
 ```bash
 pnpm dev              # validates the curriculum, then starts the dev server
 pnpm build            # validates the curriculum, then builds
-pnpm test             # 766 unit tests, fully offline, no model downloads
+pnpm test             # 780 unit tests, fully offline, no model downloads
 pnpm test:watch
 pnpm test:coverage
+pnpm test:e2e         # one Playwright smoke test — real browser, real model download, opt-in
 pnpm typecheck        # tsc --noEmit
 pnpm lint
 pnpm validate:games   # schema + cross-file curriculum validation
@@ -263,16 +265,23 @@ After the first visit, and once a chapter's model has been fetched once, Worlds 
 network:
 
 - Model weights are cached by transformers.js and WebLLM in the browser's Cache Storage.
-- The service worker caches the app shell and the bundled corpora. It deliberately does not re-cache
-  model weights, which would double the storage cost for no benefit.
+- The service worker caches the app shell, every chapter route and the bundled corpora. It
+  deliberately does not re-cache model weights, which would double the storage cost for no benefit.
+  Every chapter route is precached explicitly (`public/sw.js`'s `CHAPTER_URLS`) rather than left to
+  cache-on-visit: a real player always reaches a chapter through a client-side `Link` transition from
+  `/map`, which never arrives at the service worker as a `navigate`-mode request, so it was never
+  being cached as a side effect — found and fixed while verifying this section for real (A4,
+  `plan-docs/REMAINING-WORK.md`).
 - Progress persists to IndexedDB and hydrates without a spinner.
 - Activity is queued locally and synced when connectivity returns. The sync manager treats
   `navigator.onLine` and a real request to `/api/activity` as two separate signals, and clears only
   the event ids the server confirms.
 - World 6's cloud toggle is disabled while offline; the local model beside it keeps working.
 
-To verify: load the app, open a World 1 chapter so its model caches, then set DevTools → Network →
-Offline and reload.
+Verified for real: `pnpm build && pnpm start`, open a World 1 chapter through the map so its model
+caches, DevTools → Network → Offline, reload — the chapter itself reloads (not a fallback to
+`/map`), progress and identity survive, further play queues, and the queue drains once back online.
+Full account in `plan-docs/REMAINING-WORK.md`, A4.
 
 ---
 

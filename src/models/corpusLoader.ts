@@ -7,6 +7,7 @@ import type { CorpusDep } from '@/engines/deps';
 
 const CORPUS_PATHS: Record<string, string> = {
   'austen-sample': '/corpora/austen-sample.txt',
+  'retrieval-facts': '/corpora/retrieval-facts.json',
 };
 
 const cache = new Map<string, string>();

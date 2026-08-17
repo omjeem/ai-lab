@@ -46,6 +46,14 @@ No browser is preinstalled in this environment.
     Playwright query, that's usually a real accessibility gap in the canvas (missing text or
     `aria-label`), not a test problem — the same thing a screen reader would hit. Fix the
     component, not the selector.
+  - **`page.goto(url, { waitUntil: 'domcontentloaded' })` followed immediately by `.click('Begin')`
+    can silently swallow the click** on this app's first load (found building World 7's canvases) —
+    the click fires before the client bundle has hydrated, the button is present in the DOM but not
+    yet wired to React, and the run then sits on the concept screen forever with no error, timing out
+    on whatever selector comes next for a confusing reason (looks like a slow model load, is actually
+    a click that never registered). Fix: `waitUntil: 'networkidle'` on the `goto`, and
+    `await page.getByRole('button', { name: 'Begin' }).waitFor({ state: 'visible' })` before calling
+    `.click()` — don't just click as soon as `goto` resolves.
 
 ## 2. Introspecting a real HF model from Node (not the browser)
 

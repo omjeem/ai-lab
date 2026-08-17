@@ -112,6 +112,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./6-1-inspector-chat/InspectorChatCanvas').then((m) => m.InspectorChatCanvas),
     { ssr: false, loading }
   ),
+  '7-1-retrieval': dynamic(
+    () => import('./7-1-retrieval/RetrievalCanvas').then((m) => m.RetrievalCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

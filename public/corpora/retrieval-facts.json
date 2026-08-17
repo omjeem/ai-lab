@@ -1,0 +1,97 @@
+{
+  "facts": [
+    {
+      "id": "reef",
+      "topic": "Great Barrier Reef",
+      "sentences": [
+        "The Great Barrier Reef off the coast of Australia is the world's largest coral reef system.",
+        "It stretches 2,300 kilometers and can be seen from space.",
+        "It is home to thousands of species of marine life, including over 1,500 species of fish."
+      ],
+      "query": "How many kilometers does the Great Barrier Reef stretch?",
+      "answer": "2,300"
+    },
+    {
+      "id": "amazon",
+      "topic": "Amazon River",
+      "sentences": [
+        "The Amazon River is the largest river by discharge volume in the world.",
+        "Its length is measured at 6,992 kilometers, making it longer than the Nile.",
+        "The river flows through Brazil, Peru, and several other South American countries."
+      ],
+      "query": "What is the Amazon River's length in kilometers?",
+      "answer": "6,992"
+    },
+    {
+      "id": "burj",
+      "topic": "Burj Khalifa",
+      "sentences": [
+        "The Burj Khalifa in Dubai is the tallest building in the world.",
+        "It stands 828 meters tall and was completed in 2010.",
+        "The building has more than 160 habitable floors."
+      ],
+      "query": "How many meters tall is the Burj Khalifa?",
+      "answer": "828"
+    },
+    {
+      "id": "mariana",
+      "topic": "Mariana Trench",
+      "sentences": [
+        "The Mariana Trench in the Pacific Ocean is the deepest part of the world's oceans.",
+        "Its deepest point reaches 10,935 meters below sea level.",
+        "The trench was first fully explored by a crewed descent in 1960."
+      ],
+      "query": "How many meters deep is the Mariana Trench at its deepest point?",
+      "answer": "10,935"
+    },
+    {
+      "id": "venus",
+      "topic": "Venus",
+      "sentences": [
+        "Venus rotates very slowly on its axis.",
+        "A single day on Venus takes 243 Earth days to complete.",
+        "Despite its slow rotation, Venus is the hottest planet in the Solar System."
+      ],
+      "query": "How many Earth days does a single day on Venus take?",
+      "answer": "243"
+    },
+    {
+      "id": "sahara",
+      "topic": "Sahara Desert",
+      "sentences": [
+        "The Sahara Desert is the largest hot desert in the world.",
+        "It covers about 9,200,000 square kilometers of North Africa.",
+        "Only a small fraction of the desert is covered by sand dunes; most of it is rocky terrain."
+      ],
+      "query": "How many square kilometers does the Sahara Desert cover?",
+      "answer": "9,200,000"
+    },
+    {
+      "id": "greatwall",
+      "topic": "Great Wall of China",
+      "sentences": [
+        "The Great Wall of China is not a single continuous wall.",
+        "Including all its branches, it stretches 21,196 kilometers.",
+        "Millions of tourists visit sections of the wall near Beijing every year."
+      ],
+      "query": "How many kilometers does the Great Wall of China stretch, including all its branches?",
+      "answer": "21,196"
+    },
+    {
+      "id": "statue-liberty",
+      "topic": "Statue of Liberty",
+      "sentences": [
+        "The Statue of Liberty stands on Liberty Island in New York Harbor.",
+        "From base to torch, the statue is 93 meters tall and was a gift from France in 1886.",
+        "The statue was designed by sculptor Frederic Auguste Bartholdi."
+      ],
+      "query": "How many meters tall is the Statue of Liberty, from base to torch?",
+      "answer": "93"
+    }
+  ],
+  "documents": [
+    { "id": "doc-ocean", "factIds": ["reef", "mariana"] },
+    { "id": "doc-tall", "factIds": ["burj", "statue-liberty"] },
+    { "id": "doc-long", "factIds": ["amazon", "greatwall"] }
+  ]
+}

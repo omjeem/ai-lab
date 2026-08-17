@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "id": "7-1-retrieval",
+  "world": 7,
+  "worldTitle": "Grounding & Tools",
+  "chapterTitle": "Retrieval",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "Retrieval is the same cosine-similarity operation from World 1, aimed at a document collection instead of a handful of words. A query becomes a vector, every candidate passage becomes a vector, and the passages ranked closest to the query are what a retrieval-augmented system would hand the model as context. Nothing here is a lookup table or a keyword match — every ranking, every retrieval and every precision number below is computed live from a real embedding model over a small bundled set of factual passages.",
+    "ahaMoment": "A retriever has no idea what a passage means, and it does not need to. It only measures how close two arrows point — and at scale, that one operation is most of what search, recommendation and RAG actually are."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "Xenova/all-MiniLM-L6-v2",
+    "estimatedSizeMB": 23,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The embedding model could not be downloaded. Check your connection and retry — once cached, this chapter runs fully offline."
+  },
+  "xpReward": 135,
+  "unlockRequires": ["5-5-full-transformer"],
+  "levels": [
+    {
+      "id": "7-1-l1",
+      "title": "Rank by Relevance",
+      "difficulty": "easy",
+      "instructions": "Drag these 8 factual passages into the order you think a real retriever would rank them for the query shown. Scored against the model's actual cosine-similarity ranking, not a guess about what 'should' be relevant.",
+      "engineType": "retrievalRank",
+      "engineConfig": {
+        "mode": "rank",
+        "corpus": "retrieval-facts",
+        "query": "How tall is the tallest building in the world?",
+        "factIds": ["amazon", "burj", "greatwall", "mariana", "reef", "sahara", "statue-liberty", "venus"]
+      },
+      "passCriteria": {
+        "metric": "rankCorrelation",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.8, "stars": 2 },
+        { "threshold": 0.95, "stars": 3 }
+      ],
+      "xpReward": 40,
+      "hints": [
+        "The passage about the Burj Khalifa is the only one directly about a tallest building, so it belongs at the top. After that, judge each passage by how close its own subject sits to 'tall building' — a monument with a height (like the Statue of Liberty) should sit closer than a river, a desert, or a planet's rotation.",
+        "The real embedder cares about surface topic overlap more than deep reasoning: passages that share vocabulary with the query (heights, structures, landmarks) rank above ones that share none of it. A passage that is about depth rather than height (the Mariana Trench) or has almost no shared vocabulary at all (Venus's rotation) ranks lowest, even though 'tall' and 'deep' are conceptually related.",
+        "Checked directly against the real model: the true order is Burj Khalifa (0.718), Statue of Liberty (0.347), Great Wall of China (0.277), Amazon River (0.199), Sahara Desert (0.191), Great Barrier Reef (0.188), Mariana Trench (0.181), Venus (0.098)."
+      ]
+    },
+    {
+      "id": "7-1-l2",
+      "title": "Break the Retriever",
+      "difficulty": "medium",
+      "instructions": "Type a query that makes the Mariana Trench passage rank #1 among all 8 real passages. You only see the topic, not the text — the retriever is real, so a lucky guess will not score; a genuinely well-aimed query will.",
+      "engineType": "retrievalRank",
+      "engineConfig": {
+        "mode": "break-retriever",
+        "corpus": "retrieval-facts",
+        "targetFactId": "mariana"
+      },
+      "passCriteria": {
+        "metric": "retrievalMargin",
+        "threshold": 0,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0, "stars": 1 },
+        { "threshold": 0.2, "stars": 2 },
+        { "threshold": 0.4, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "hints": [
+        "A vague query about 'deep places' or 'the ocean' in general is competing against a passage about a coral reef and a passage about a river — both also ocean-adjacent. Name the specific thing: what is the Mariana Trench, where is it, what is special about it.",
+        "The real embedder rewards vocabulary that overlaps tightly with the passage's own words far more than a topically-nearby paraphrase. A single-word query ('ocean') barely beats the reef passage; a query built from the passage's own likely vocabulary (trench, deepest, Pacific) pulls the target far ahead of everything else.",
+        "Checked directly: the single word 'ocean' does not even retrieve the Mariana Trench passage top-1. The query 'deepest ocean trench Pacific' does — margin 0.561 over the next-closest real passage (Great Barrier Reef) — comfortably inside the 3-star band."
+      ]
+    },
+    {
+      "id": "7-1-l3",
+      "title": "Chunking Strategy",
+      "difficulty": "hard",
+      "instructions": "Three source documents each blend two unrelated facts into one block of text. For each of the 6 real queries below, choose whether the retriever should search whole documents (paragraph) or individual sentences — scored on the real retrieval precision your choice actually gets, per query.",
+      "engineType": "retrievalRank",
+      "engineConfig": {
+        "mode": "chunking",
+        "corpus": "retrieval-facts",
+        "documentIds": ["doc-ocean", "doc-tall", "doc-long"]
+      },
+      "passCriteria": {
+        "metric": "retrievalPrecision",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 50,
+      "hints": [
+        "Paragraph-level retrieval always returns the whole document — both of its facts — so at best only half of what you get back is actually relevant to any one query. Sentence-level retrieval can return just the one sentence that matters, if it finds the right one.",
+        "Since each document merges two genuinely different topics (a reef and a trench; two tall structures; two long ones), the whole-document vector is a blend of both — real similarity search over the individual sentences finds the exact right one for every query in this set, because a single sentence's vector is not diluted by its neighbour's topic.",
+        "Checked directly against the real model, for all 6 queries here: paragraph-level retrieval always finds the right document, but returns 6 sentences for a question with only 3 relevant ones — precision exactly 0.5, every time. Sentence-level retrieval finds the exact right sentence in all 6 cases — precision 1.0. Picking sentence for every query is the only way to clear the 3-star band."
+      ]
+    }
+  ]
+}

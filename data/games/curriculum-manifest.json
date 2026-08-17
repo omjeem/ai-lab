@@ -252,6 +252,24 @@
           "unlockRequires": ["5-5-full-transformer"]
         }
       ]
+    },
+    {
+      "world": 7,
+      "title": "Grounding & Tools",
+      "subtitle": "Retrieval, context and real tools",
+      "accent": "#2dd9c4",
+      "directory": "world-7-grounding-tools",
+      "chapters": [
+        {
+          "id": "7-1-retrieval",
+          "title": "Retrieval",
+          "order": 1,
+          "file": "world-7-grounding-tools/7-1-retrieval.json",
+          "tier": "browser-light",
+          "xpReward": 135,
+          "unlockRequires": ["5-5-full-transformer"]
+        }
+      ]
     }
   ],
   "ranks": [

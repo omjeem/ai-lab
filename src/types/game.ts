@@ -94,7 +94,7 @@ export const gameDefinitionSchema = z
   .object({
     schemaVersion: z.literal(GAME_SCHEMA_VERSION),
     id: z.string().min(1),
-    world: z.number().int().min(1).max(6),
+    world: z.number().int().min(1).max(9),
     worldTitle: z.string().min(1),
     chapterTitle: z.string().min(1),
     order: z.number().int().min(1),
@@ -213,7 +213,7 @@ export const manifestChapterSchema = z.object({
 export type ManifestChapter = z.infer<typeof manifestChapterSchema>;
 
 export const manifestWorldSchema = z.object({
-  world: z.number().int().min(1).max(6),
+  world: z.number().int().min(1).max(9),
   title: z.string().min(1),
   subtitle: z.string().min(1),
   /** CSS custom-property hue driving this world's accent across its chapters. */

@@ -28,14 +28,26 @@ No browser is preinstalled in this environment.
   to make sure none are left untracked-but-forgotten.
 - Navigation pattern for this app, useful for any chapter:
   - URL is `/world/{worldNumber}/chapter/{chapterId}` (e.g. `/world/5/chapter/5-2-self-attention`).
-  - Every chapter opens on a concept/instructions screen first. Click the exact text `Begin` to
-    reach the actual canvas — the `ModelGate`/engine doesn't mount before that.
-  - **Don't wait on a text string that might also appear in the concept prose.** `waitForSelector('text=temperature')`
-    matched the concept paragraph (which mentions "temperature" in prose) and resolved
-    immediately, before the canvas or its model had even started loading — the run then timed
-    out on the next step for a confusing reason. Wait on a structural selector that only exists
-    once the canvas is mounted instead, e.g. `input[type="range"]` or a label unique to the
-    rendered board.
+  - **Every level opens on its own concept/instructions screen, not just the chapter's first
+    one.** `ChapterShell` renders this screen whenever its session `phase` is `'concept'`, and
+    advancing past a passed level (`goToLevel`, via the HUD's "Next level" button) resets `phase`
+    back to `'concept'` — so a 3-level chapter needs **three separate `Begin` clicks**, one per
+    level, not one for the whole chapter. While `phase === 'concept'` the game component is a
+    ternary branch that isn't rendered at all (not a hidden overlay), so nothing in the actual
+    canvas — its inputs, its `ModelGate` — exists in the DOM yet. Clicking "Next level" and
+    immediately looking for the next level's board without an intervening `Begin` click hangs on
+    whatever selector comes next, for a reason that looks like a slow model load but isn't one.
+  - **Don't wait on a text string that might also appear in the concept prose — including a
+    level's own title, across a level transition.** `waitForSelector('text=temperature')` matched
+    the concept paragraph (which mentions "temperature" in prose) and resolved immediately, before
+    the canvas or its model had even started loading. The same trap fires when advancing levels:
+    the concept screen shown before level 2 renders that level's own title too (as `"level
+    7-1-l2 · Break the Retriever"`), so `waitForSelector('text=Break the Retriever')` — intended to
+    confirm level 2's *board* had mounted — instead resolves on the *concept* screen for level 2,
+    one `Begin` click too early, and every following step then looks for elements that don't exist
+    yet. In both cases the run times out on the *next* step for a confusing reason. Wait on a
+    structural selector that only exists once the canvas is mounted instead, e.g.
+    `input[type="range"]` or a label/`aria-label` unique to the rendered board.
   - Model downloads can take anywhere from a few seconds to ~2–3 minutes depending on size;
     give `waitForSelector` a generous timeout (120–180s) rather than polling.
   - Useful stable selectors once mounted: the HUD's metric name in caps (`text=ENTROPYERROR`,

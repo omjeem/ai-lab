@@ -22,6 +22,7 @@ import {
   greedyDecode,
   buildGroundedPrompt,
   buildCuratedContextText,
+  containsAnswer,
   type GroundedFact,
   type GroundedGenerationAction,
   type GroundedGenerationConfig,
@@ -294,14 +295,14 @@ function PickTestRow({
     setBusy(true);
     try {
       const prompt = buildGroundedPrompt(candidate.sentences.join(' '), target.query);
-      const decodedText = await greedyDecode(tinyCausalLM, prompt, (state.config as { maxTokens: number }).maxTokens);
+      const decodedText = await greedyDecode(tinyCausalLM, prompt, state.config.maxTokens);
       dispatch({ type: 'TEST_PASSAGE', roundIndex, decodedText });
     } finally {
       setBusy(false);
     }
   };
 
-  const correct = round.decodedText && target && round.decodedText.replace(/,/g, '').includes(target.answer.replace(/,/g, ''));
+  const correct = round.decodedText !== null && !!target && containsAnswer(round.decodedText, target.answer);
 
   return (
     <div className="flex flex-col gap-2 border-t border-line-faint pt-2">
@@ -341,7 +342,7 @@ function CurateContextBoard({
     try {
       const context = buildCuratedContextText(target, distractor, state.order, state.truncateDistractor);
       const prompt = buildGroundedPrompt(context, target.query);
-      const decodedText = await greedyDecode(tinyCausalLM, prompt, (state.config as { maxTokens: number }).maxTokens);
+      const decodedText = await greedyDecode(tinyCausalLM, prompt, state.config.maxTokens);
       dispatch({ type: 'TEST_CONTEXT', decodedText });
     } finally {
       setBusy(false);

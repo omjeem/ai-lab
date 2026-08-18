@@ -14,6 +14,10 @@ export const activityEventTypeSchema = z.enum([
   'model_download_failed',
   'cloud_inference_used',
   'onboarding_completed',
+  /** Fired when a chapter route loads with `?via=share`, regardless of lock state. */
+  'chapter_shared_link_opened',
+  /** Fired only when the prerequisite warning dialog was shown and the player chose to proceed. */
+  'chapter_jumped_ahead',
 ]);
 export type ActivityEventType = z.infer<typeof activityEventTypeSchema>;
 

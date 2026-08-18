@@ -123,6 +123,41 @@ never reach the browser.
 /tests/                 Mirrors src/engines, src/models and src/lib
 ```
 
+## Navigation, unlocking and sharing
+
+A chapter's `unlockRequires` graph (`src/lib/curriculum.ts`) still drives everything about
+progression — the map's lock icon, its "complete X first" tooltip, and what counts as the
+legitimate next step. What changed is the *consequence* of a chapter being locked: it no longer
+blocks navigation outright.
+
+- **Every chapter route is reachable, including locked ones.** The map's `ChapterNode`
+  (`src/components/map/WorldMap.tsx`) renders a real `<Link>` regardless of lock status now — the
+  old hard block was a plain non-clickable `<div>` for locked chapters. Locked chapters keep their
+  dimmed styling and lock icon; they're just not dead ends anymore.
+- **The actual gate lives in one place**: `ChapterPageClient.tsx`, not the map. Unlock state comes
+  from `completionRecord()` in IndexedDB, which has no server-side equivalent (there's no account
+  system), so this can only be checked client-side — and centralizing it here means it applies no
+  matter how someone arrives: a map click, a typed URL, a bookmark, or the back button.
+- **Locked + no share marker → a warning dialog**, naming the specific unfinished prerequisite(s)
+  by title, with "Play anyway" / "Back to the map". Choosing to proceed keeps a dismissible banner
+  up for the rest of that visit, reminding the player what they skipped, with real links to the
+  missing chapter and the map.
+- **Every chapter has a share icon** (map node and in-chapter header, both using
+  `src/components/ui/ShareButton.tsx` → `src/lib/shareLink.ts`), producing a link with `?via=share`.
+  Opening that link skips the warning entirely, for anyone, regardless of their own progress — the
+  point of a share link is to hand someone a working door into a specific chapter.
+  - The marker is deliberately **not** named `source` — `src/middleware.ts` already intercepts any
+    `?source=` on every route for an unrelated external-tracking beacon and strips it via redirect,
+    which would destroy a same-named marker before it's ever read.
+  - `public/sw.js`'s offline `networkFirst()` matches the request with `{ ignoreSearch: true }` so
+    a `?via=share` URL still resolves to its precached chapter when opened offline as an installed
+    PWA, instead of silently falling back to the `/map` shell.
+- **Two activity event types** track this (`src/types/activity.ts`): `chapter_jumped_ahead` (fired
+  only when the dialog was shown and the player chose to proceed) and
+  `chapter_shared_link_opened` (fired whenever `?via=share` is present, with a `detail.wasLocked`
+  flag distinguishing "shared a chapter you'd already unlocked" from "the link let someone skip a
+  gate").
+
 ### The two rules that shape everything
 
 **Game logic lives in JSON, never in components.** Every level's parameters, pass criteria and star

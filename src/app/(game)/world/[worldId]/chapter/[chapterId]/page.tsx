@@ -4,6 +4,7 @@ import { getGame } from '@/lib/curriculum';
 import { ChapterPageClient } from './ChapterPageClient';
 
 type Params = Promise<{ worldId: string; chapterId: string }>;
+type SearchParams = Promise<{ via?: string }>;
 
 /**
  * Real per-chapter title and description, pulled from the chapter's own
@@ -27,10 +28,19 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-export default async function ChapterPage({ params }: { params: Params }) {
+export default async function ChapterPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { chapterId } = await params;
   const game = getGame(chapterId);
   if (!game) notFound();
 
-  return <ChapterPageClient chapterId={chapterId} />;
+  const { via } = await searchParams;
+  const sharedEntry = via === 'share';
+
+  return <ChapterPageClient chapterId={chapterId} sharedEntry={sharedEntry} />;
 }

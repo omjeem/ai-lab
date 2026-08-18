@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ArrowLeft, ArrowRight, Lightbulb, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lightbulb, RotateCcw, X } from 'lucide-react';
 import type { GameDefinition, GameLevel, ScoreResult } from '@/types/game';
 import { nextChapterAfter, worldOfChapter } from '@/lib/curriculum';
 import {
@@ -23,6 +23,7 @@ import { useSessionStore } from '@/store/useSessionStore';
 import { enqueueActivity } from '@/lib/offlineQueue';
 import { playChapterCompleteTone, playCorrectTone } from '@/lib/sound';
 import { Button, Heading, Panel, Readout, StarRating, Tag, cx } from '@/components/ui';
+import { ShareButton } from '@/components/ui/ShareButton';
 
 export interface GameRenderProps {
   level: GameLevel;
@@ -32,8 +33,15 @@ export interface GameRenderProps {
   onSubmit: (result: ScoreResult) => void;
 }
 
+/** The prerequisite chapters this one's `unlockRequires` still needs. */
+export interface PrerequisiteGap {
+  missing: { id: string; title: string; world: number }[];
+}
+
 export interface ChapterShellProps {
   game: GameDefinition;
+  /** Present whenever this chapter is being played without its prerequisites met — via "Play anyway" or a shared link — so the persistent reminder banner renders. */
+  prerequisiteGap?: PrerequisiteGap;
   /** Renders the level's own canvas and controls. */
   children: (props: GameRenderProps) => ReactNode;
 }
@@ -51,10 +59,11 @@ function resumeLevelIndex(game: GameDefinition, progress: ChapterProgress | null
   return index === -1 ? game.levels.length - 1 : index;
 }
 
-export function ChapterShell({ game, children }: ChapterShellProps) {
+export function ChapterShell({ game, prerequisiteGap, children }: ChapterShellProps) {
   const reduce = useReducedMotion();
   const world = worldOfChapter(game.id);
   const nextChapter = nextChapterAfter(game.id);
+  const [gapDismissed, setGapDismissed] = useState(false);
 
   const userId = useGameProgressStore((s) => s.userId);
   const recordLevel = useGameProgressStore((s) => s.recordLevel);
@@ -174,6 +183,10 @@ export function ChapterShell({ game, children }: ChapterShellProps) {
           worldNumber={world?.world ?? game.world}
         />
 
+        {prerequisiteGap && prerequisiteGap.missing.length > 0 && !gapDismissed && (
+          <PrerequisiteGapBanner gap={prerequisiteGap} onDismiss={() => setGapDismissed(true)} />
+        )}
+
         <div className="relative flex min-h-0 flex-1 flex-col">
           {phase === 'concept' ? (
             <ConceptPanel game={game} level={level} onStart={() => setPhase('playing')} />
@@ -266,9 +279,58 @@ function ChapterBar({
         </div>
       </div>
 
+      <ShareButton world={worldNumber} chapterId={game.id} chapterTitle={game.chapterTitle} size={13} />
+
       <span className="label whitespace-nowrap">
         {levelIndex + 1}/{totalLevels} · {level.difficulty}
       </span>
+    </div>
+  );
+}
+
+/* ── prerequisite-gap banner ────────────────────────────────── */
+
+/**
+ * Stays up for as long as this chapter is being played without its
+ * prerequisites met (jumped ahead or shared into) — a dismiss just hides it
+ * for this visit; reopening or reloading the chapter shows it again, since
+ * the underlying gap hasn't actually closed.
+ */
+function PrerequisiteGapBanner({
+  gap,
+  onDismiss,
+}: {
+  gap: PrerequisiteGap;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
+      <span className="min-w-0 flex-1 leading-relaxed">
+        You haven&apos;t finished{' '}
+        {gap.missing.map((m, i) => (
+          <span key={m.id}>
+            {i > 0 && ', '}
+            <Link
+              href={`/world/${m.world}/chapter/${m.id}`}
+              className="underline underline-offset-2 hover:text-primary"
+            >
+              {m.title}
+            </Link>
+          </span>
+        ))}{' '}
+        yet — finish {gap.missing.length === 1 ? 'it' : 'them'} first to build on this properly.
+      </span>
+      <Link href="/map" className="label shrink-0 underline underline-offset-2 hover:text-primary">
+        map
+      </Link>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="shrink-0 text-warn transition-colors hover:text-primary"
+      >
+        <X size={13} strokeWidth={2} />
+      </button>
     </div>
   );
 }

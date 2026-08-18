@@ -132,7 +132,12 @@ async function networkFirst(request, cacheName) {
     }
     return response;
   } catch {
-    const cached = (await caches.match(request)) ?? (await caches.match('/map'));
+    // `ignoreSearch` matters for shared chapter links (`?via=share`) — without
+    // it, the exact-match lookup misses the precached chapter entry (which
+    // has no query string) and silently falls back to the `/map` shell, the
+    // same bug class this file already fixed once for the plain-URL case.
+    const cached =
+      (await caches.match(request, { ignoreSearch: true })) ?? (await caches.match('/map'));
     if (cached) return cached;
     return new Response('Offline and this page has not been cached yet.', {
       status: 503,

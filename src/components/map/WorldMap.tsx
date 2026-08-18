@@ -18,6 +18,7 @@ import {
   type CompletionRecord,
 } from '@/lib/curriculum';
 import { Heading, Meter, Readout, StarRating, Tag, cx } from '@/components/ui';
+import { ShareButton } from '@/components/ui/ShareButton';
 import type { ManifestChapter, ManifestWorld } from '@/types/game';
 
 export function WorldMap({ completed, xp }: { completed: CompletionRecord; xp: number }) {
@@ -169,11 +170,14 @@ function ChapterNode({
     >
       <div className="flex items-start justify-between gap-2">
         <span className="readout text-[10px] text-muted">{chapter.id}</span>
-        {locked ? (
-          <Lock size={11} strokeWidth={2} className="text-muted" />
-        ) : state.status === 'completed' ? (
-          <Check size={11} strokeWidth={2.5} className="text-accent" />
-        ) : null}
+        <div className="flex items-center gap-0.5">
+          {locked ? (
+            <Lock size={11} strokeWidth={2} className="text-muted" />
+          ) : state.status === 'completed' ? (
+            <Check size={11} strokeWidth={2.5} className="text-accent" />
+          ) : null}
+          <ShareButton world={world.world} chapterId={chapter.id} chapterTitle={chapter.title} size={11} />
+        </div>
       </div>
 
       <span
@@ -196,21 +200,15 @@ function ChapterNode({
     </motion.div>
   );
 
-  if (locked) {
-    return (
-      <div
-        title={`Complete ${state.missing.join(', ')} first`}
-        aria-label={`${chapter.title}, locked. Requires ${state.missing.join(', ')}`}
-      >
-        {body}
-      </div>
-    );
-  }
-
   return (
     <Link
       href={`/world/${world.world}/chapter/${chapter.id}`}
-      aria-label={`${chapter.title}, ${state.status}`}
+      aria-label={
+        locked
+          ? `${chapter.title}, locked. Requires ${state.missing.join(', ')}. Opens with a warning.`
+          : `${chapter.title}, ${state.status}`
+      }
+      title={locked ? `Complete ${state.missing.join(', ')} first` : undefined}
       className="block h-full"
     >
       {body}

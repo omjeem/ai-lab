@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "id": "8-2-context-length",
+  "world": 8,
+  "worldTitle": "Scale, Efficiency & Safety",
+  "chapterTitle": "Context Length & Degradation",
+  "order": 2,
+  "concept": {
+    "shortExplanation": "A model's context window is not a neutral container — everything you put in it competes for the same fixed resources. This chapter measures three real consequences of that competition: whether a planted fact can still be found once enough real text surrounds it, whether a real transformer's attention to an early token measurably thins as more tokens compete for it, and whether a fixed budget of context can still be spent safely once more than one real candidate fact could fill it. Every pass, every attention weight and every real decode below comes from an actual forward pass through the same tiny model and attention network this course already uses — nothing here is a fitted curve.",
+    "ahaMoment": "Context length isn't free just because a model technically accepts it. Retrieval genuinely degrades past a real, measurable point; attention to any one token really does thin as competition grows; and a context budget spent on the wrong second fact can silently break the exact question you needed it to answer — not because that fact was irrelevant, but because of where you placed it."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 92,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The model this chapter needs could not be downloaded. Check your connection and retry — once cached, this chapter runs fully offline."
+  },
+  "xpReward": 135,
+  "unlockRequires": ["8-1-quantization"],
+  "levels": [
+    {
+      "id": "8-2-l1",
+      "title": "Needle in a Haystack",
+      "difficulty": "easy",
+      "instructions": "A real fact about Venus is planted at the very start of a block of unrelated real text (the opening of Pride and Prejudice), which then grows through 3 real lengths. For each length, predict whether the model will still correctly answer a question about that fact once it has to search past all that filler to find it.",
+      "engineType": "contextDegradation",
+      "engineConfig": {
+        "mode": "needle-haystack",
+        "corpus": "retrieval-facts",
+        "factId": "venus",
+        "fillerCorpus": "austen-sample",
+        "fillerWordCounts": [300, 900, 1200],
+        "maxTokens": 10
+      },
+      "passCriteria": {
+        "metric": "retrievalPredictionAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40,
+      "hints": [
+        "The fact is planted at the very start of a growing block of unrelated real text before the question is asked at the end. Longer really does mean harder to retrieve — there's a real point where the model stops finding it.",
+        "Watch the model's own wording, not just whether it eventually says a number: just past the real breaking point it still attempts an answer, but gets the actual digits wrong rather than refusing to answer or trailing off.",
+        "Checked directly against the real model: with the fact at the very start, correct retrieval holds at 300 and 900 words of added real filler text ('243 Earth days...' both times) and fails by 1,200 words, where the real decode drops a digit ('24 days')."
+      ]
+    },
+    {
+      "id": "8-2-l2",
+      "title": "Attention Dilution",
+      "difficulty": "medium",
+      "instructions": "The same family of sentence grows across 4 real rounds, each ending in the same period. For each round, a real transformer's attention model has already computed how much of that final token's attention goes to every earlier word. Identify the token that gets the most (round 1) or the least (rounds 2–4) of that real attention.",
+      "engineType": "contextDegradation",
+      "engineConfig": {
+        "mode": "attention-dilution",
+        "sentences": [
+          "Marie studied physics.",
+          "Marie studied physics at a small university near the coast.",
+          "Marie studied physics at a small university near the coast, where she also worked part time in the library.",
+          "Marie studied physics at a small university near the coast, where she also worked part time in the library, and every weekend she volunteered teaching science to local schoolchildren."
+        ],
+        "targets": ["max", "min", "min", "min"]
+      },
+      "passCriteria": {
+        "metric": "dilutionGuessAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "hints": [
+        "Attention is a fixed budget shared across every real token in the sentence — the more words compete for it, the thinner any one word's real share gets, whether or not that word matters much to the sentence's meaning.",
+        "The sentence's own subject tends to hold onto a disproportionate share of real attention even as the sentence grows around it. It's the words playing a smaller grammatical role — a preposition, a short connector — that get crowded out hardest as more of them pile up.",
+        "Checked directly against the real attention model, averaged across every real layer and head: in the short first sentence, 'studied' holds the most attention. In the three longer sentences, 'near' (13 tokens), then 'part' (23 tokens), then 'in' (36 tokens) each hold the least — down to about 1% of the real total in the longest sentence — while 'Marie' holds the most in all three."
+      ]
+    },
+    {
+      "id": "8-2-l3",
+      "title": "Spend the Budget",
+      "difficulty": "hard",
+      "instructions": "You have room for the Mariana Trench passage plus exactly one more. Pick which of the three candidates to add and which order to place them in, then test whether the model still answers the Mariana Trench question correctly — which fact you add barely matters here; where you put it does.",
+      "engineType": "contextDegradation",
+      "engineConfig": {
+        "mode": "budget-subset",
+        "corpus": "retrieval-facts",
+        "targetFactId": "mariana",
+        "distractorFactIds": ["reef", "burj", "statue-liberty"],
+        "budget": 2,
+        "maxTokens": 16
+      },
+      "passCriteria": {
+        "metric": "attemptsToSolve",
+        "threshold": 3,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 3, "stars": 1 },
+        { "threshold": 2, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 50,
+      "hints": [
+        "Every one of the three extra facts is individually harmless on its own merits — the real danger isn't which fact you add, it's where you put it relative to the question.",
+        "The passage sitting closest to 'Question:' pulls far harder on the real answer than the one placed first, regardless of what that closer passage happens to be about. The Mariana Trench's own real answer also takes several tokens to produce, which makes it especially vulnerable to losing that pull.",
+        "Checked directly in a real browser run, for all three extra facts, in both orders: placing the target passage right before the question (the extra fact first) succeeds every time — 3 of 3 real combinations. Placing an extra fact right before the question (target first) fails every time — 0 of 3 — sometimes by producing that fact's own number instead, sometimes by trailing off before finishing the real digits."
+      ]
+    }
+  ]
+}

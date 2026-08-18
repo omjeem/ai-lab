@@ -313,6 +313,15 @@
           "tier": "browser-heavy",
           "xpReward": 135,
           "unlockRequires": ["7-4-agent-loop"]
+        },
+        {
+          "id": "8-2-context-length",
+          "title": "Context Length & Degradation",
+          "order": 2,
+          "file": "world-8-efficiency-safety/8-2-context-length.json",
+          "tier": "browser-heavy",
+          "xpReward": 135,
+          "unlockRequires": ["8-1-quantization"]
         }
       ]
     }

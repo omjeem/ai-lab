@@ -44,6 +44,7 @@ import g72 from '@data/games/world-7-grounding-tools/7-2-grounded-generation.jso
 import g73 from '@data/games/world-7-grounding-tools/7-3-tool-calling.json';
 import g74 from '@data/games/world-7-grounding-tools/7-4-agent-loop.json';
 import g81 from '@data/games/world-8-efficiency-safety/8-1-quantization.json';
+import g82 from '@data/games/world-8-efficiency-safety/8-2-context-length.json';
 
 export const manifest = manifestJson as CurriculumManifest;
 
@@ -55,7 +56,7 @@ const GAMES = [
   g51, g52, g53, g54, g55,
   g61,
   g71, g72, g73, g74,
-  g81,
+  g81, g82,
 ] as unknown as GameDefinition[];
 
 const BY_ID = new Map(GAMES.map((game) => [game.id, game]));

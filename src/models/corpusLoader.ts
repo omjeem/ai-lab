@@ -9,6 +9,7 @@ const CORPUS_PATHS: Record<string, string> = {
   'austen-sample': '/corpora/austen-sample.txt',
   'retrieval-facts': '/corpora/retrieval-facts.json',
   'calibration-easy-facts': '/corpora/calibration-easy-facts.json',
+  'robustness-prompts': '/corpora/robustness-prompts.json',
 };
 
 const cache = new Map<string, string>();

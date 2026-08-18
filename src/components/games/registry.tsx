@@ -140,6 +140,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./8-3-calibration-hallucination/CalibrationCanvas').then((m) => m.CalibrationCanvas),
     { ssr: false, loading }
   ),
+  '8-4-red-teaming': dynamic(
+    () => import('./8-4-red-teaming/RobustnessCanvas').then((m) => m.RobustnessCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

@@ -16,7 +16,7 @@ import {
 
 describe('curriculum access', () => {
   it('exposes every chapter', () => {
-    expect(allGames()).toHaveLength(29);
+    expect(allGames()).toHaveLength(30);
     expect(getGame('1-1-vectors')?.chapterTitle).toBe('What is a Vector?');
     expect(getGame('nope')).toBeNull();
   });
@@ -29,9 +29,9 @@ describe('curriculum access', () => {
 
   it('orders chapters for play', () => {
     const ordered = orderedChapters();
-    expect(ordered).toHaveLength(29);
+    expect(ordered).toHaveLength(30);
     expect(ordered[0]!.id).toBe('1-1-vectors');
-    expect(ordered.at(-1)!.id).toBe('8-3-calibration-hallucination');
+    expect(ordered.at(-1)!.id).toBe('8-4-red-teaming');
   });
 
   it('walks to the next chapter, across a world boundary', () => {
@@ -43,7 +43,8 @@ describe('curriculum access', () => {
     expect(nextChapterAfter('7-4-agent-loop')?.id).toBe('8-1-quantization');
     expect(nextChapterAfter('8-1-quantization')?.id).toBe('8-2-context-length');
     expect(nextChapterAfter('8-2-context-length')?.id).toBe('8-3-calibration-hallucination');
-    expect(nextChapterAfter('8-3-calibration-hallucination')).toBeNull();
+    expect(nextChapterAfter('8-3-calibration-hallucination')?.id).toBe('8-4-red-teaming');
+    expect(nextChapterAfter('8-4-red-teaming')).toBeNull();
   });
 });
 
@@ -122,7 +123,7 @@ describe('progress summary', () => {
     expect(summary.rank.title).toBe('Gradient Novice');
     expect(summary.chaptersCompleted).toBe(0);
     expect(summary.starsEarned).toBe(0);
-    expect(summary.starsPossible).toBe(87);
+    expect(summary.starsPossible).toBe(90);
   });
 
   it('promotes through the ranks with XP', () => {

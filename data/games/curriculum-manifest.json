@@ -331,6 +331,15 @@
           "tier": "browser-light",
           "xpReward": 135,
           "unlockRequires": ["8-2-context-length"]
+        },
+        {
+          "id": "8-4-red-teaming",
+          "title": "Red-Teaming",
+          "order": 4,
+          "file": "world-8-efficiency-safety/8-4-red-teaming.json",
+          "tier": "browser-light",
+          "xpReward": 135,
+          "unlockRequires": ["8-3-calibration-hallucination"]
         }
       ]
     }

@@ -348,6 +348,23 @@ Full account in `plan-docs/REMAINING-WORK.md`, A4.
 
 ---
 
+## Admin dashboard
+
+`/admin/dashboard` (cookie-session auth, see the environment variables above) has two tabs:
+
+- **Users** — the original paginated user list and per-user activity drilldown.
+- **Chapter analytics** — one row per chapter (`src/lib/adminAnalytics.ts`'s `shapeChapterAnalytics`,
+  served by `src/app/api/admin/analytics/route.ts`): distinct users who started/completed it, the
+  resulting completion rate, level pass/fail counts, and how often the new navigation events fired
+  (`chapter_jumped_ahead`, `chapter_shared_link_opened`) — everything traced back to a specific
+  chapter and world.
+- Backed by a single `activity` aggregation grouped by `{chapterId, type}` (both a raw count and a
+  distinct-`userId` count per group), joined onto `orderedChapters()` so every chapter shows up even
+  with zero activity — not just the ones with rows. A `{chapterId: 1, type: 1}` index
+  (`src/lib/mongodb.ts`) backs this.
+
+---
+
 ## Privacy
 
 Onboarding shows a one-line, non-blocking disclosure before anything is collected. What is stored:

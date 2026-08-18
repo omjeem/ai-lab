@@ -79,6 +79,8 @@ async function ensureIndexes(db: Db): Promise<void> {
       db.collection('activity').createIndex({ userId: 1, timestamp: -1 }),
       // Deduplicates a batch replayed after a dropped response.
       db.collection('activity').createIndex({ eventId: 1 }, { unique: true }),
+      // Backs the admin per-chapter analytics aggregation (group by chapterId + type).
+      db.collection('activity').createIndex({ chapterId: 1, type: 1 }),
     ]);
   } catch {
     // A permissions-restricted user may not be allowed to create indexes; the

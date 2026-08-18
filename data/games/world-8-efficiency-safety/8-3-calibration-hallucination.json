@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "id": "8-3-calibration-hallucination",
+  "world": 8,
+  "worldTitle": "Scale, Efficiency & Safety",
+  "chapterTitle": "Calibration & Hallucination",
+  "order": 3,
+  "concept": {
+    "shortExplanation": "Ask this tiny model a question with no supporting text at all and it never refuses — it always produces something fluent, confident-sounding, and often simply wrong. This chapter measures whether the model's own real confidence (the average probability it assigns its own generated tokens) says anything honest about whether that answer is actually correct, whether the most dangerous case — a wrong answer stated more confidently than a real correct one — actually happens, and whether asking the model to be cautious really lowers its confidence on the answers it's getting wrong. Every confidence number and every generated answer comes from an actual forward pass through the real model — nothing here is a fitted curve or an authored judgment.",
+    "ahaMoment": "Confidence and correctness are not the same thing. This model can be more confident about a wrong answer than a right one sitting right next to it, and asking it to \"only answer if certain\" measurably lowers its confidence on some wrong answers but just as measurably raises it on others — a real, honest reminder that a fluent, confident-sounding answer is not evidence that it's true."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 92,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The 135M language model could not be downloaded. It is roughly 90MB — check your connection and available storage, then retry. It runs fully offline once cached."
+  },
+  "xpReward": 135,
+  "unlockRequires": ["8-2-context-length"],
+  "levels": [
+    {
+      "id": "8-3-l1",
+      "title": "Confidence vs. Correctness",
+      "difficulty": "easy",
+      "instructions": "Each of these 8 questions was asked with zero supporting context — the model has only its own memorized knowledge to draw on. Its real confidence in its own answer is shown. Predict whether the real answer it actually generated was correct or wrong.",
+      "engineType": "calibration",
+      "engineConfig": {
+        "mode": "predict-correctness",
+        "factSources": ["calibration-easy-facts", "retrieval-facts"],
+        "maxTokens": 16,
+        "factIds": [
+          "capital-japan",
+          "closest-planet",
+          "opposite-hot",
+          "largest-ocean",
+          "heart-organ",
+          "burj",
+          "grass-color",
+          "amazon"
+        ]
+      },
+      "passCriteria": {
+        "metric": "confidenceCorrectnessAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40,
+      "hints": [
+        "Real confidence here is the model's own average probability across the tokens of the answer it actually generated — high confidence is not the same thing as the model actually knowing the fact.",
+        "Watch for real confidence values that don't sort the way you'd expect: some of the correct answers here have *lower* real confidence than some of the wrong ones sitting right next to them.",
+        "Checked directly against the real model: the single most confident answer here, 'The capital of Japan is Tokyo' (real 95.5%), is correct — but the very next most confident, 'Mars is the closest planet to the Sun' (real 76.5%), is confidently wrong (the real answer is Mercury). Correct and wrong alternate all the way down this list by confidence rank; a simple 'high confidence = correct' rule scores no better here than chance."
+      ]
+    },
+    {
+      "id": "8-3-l2",
+      "title": "Spot the Confident Hallucination",
+      "difficulty": "medium",
+      "instructions": "Each round shows the model's real, unedited answers to 4 different questions, all asked with no supporting context. Exactly one of these answers in each round is both factually wrong and the most confident wrong answer of the group — find it using what you actually know, then check the real confidence numbers.",
+      "engineType": "calibration",
+      "engineConfig": {
+        "mode": "spot-hallucination",
+        "factSources": ["calibration-easy-facts", "retrieval-facts"],
+        "maxTokens": 16,
+        "rounds": [
+          { "candidateFactIds": ["capital-germany", "banana-color", "venus", "sahara"] },
+          { "candidateFactIds": ["largest-planet", "mariana", "reef", "capital-france"] },
+          { "candidateFactIds": ["sky-color", "fastest-animal", "statue-liberty", "greatwall"] }
+        ]
+      },
+      "passCriteria": {
+        "metric": "hallucinationSpotAccuracy",
+        "threshold": 0.3,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.3, "stars": 1 },
+        { "threshold": 0.6, "stars": 2 },
+        { "threshold": 0.9, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "hints": [
+        "Confidence is hidden until you commit to a guess in each round — you have to judge which claim is actually false yourself first, the same way a reader would have to.",
+        "In every one of these three rounds, the model's most dangerous wrong answer is stated with more real confidence than its own correct answer sitting right next to it in the same round — the fluent, confident tone gives no warning either way.",
+        "Checked directly against the real model: round 1's 'A ripe banana is red' (the real answer is yellow) is real 70.2%, above the round's own correct answer about Germany's capital (60.6%). Round 2's 'The deepest point of the Mariana Trench is 36 meters deep' (the real answer is 10,935) is real 66.6%, above the round's correct answer about the largest planet (60.3%). Round 3's 'The fastest land animal is the kangaroo' (the real answer is the cheetah) is real 67.8% — 16 points above the round's own correct answer about the sky's color (51.8%), the widest gap of the three."
+      ]
+    },
+    {
+      "id": "8-3-l3",
+      "title": "Can You Talk It Down?",
+      "difficulty": "hard",
+      "instructions": "Every question below is one the model already answers wrong with no context. Before testing, predict whether adding \"Only answer if you are completely certain; otherwise say you don't know\" to the prompt will really raise or lower the model's confidence in its (still wrong) answer.",
+      "engineType": "calibration",
+      "engineConfig": {
+        "mode": "reduce-confidence",
+        "factSources": ["calibration-easy-facts", "retrieval-facts"],
+        "maxTokens": 16,
+        "targetFactIds": ["banana-color", "reef", "amazon", "capital-italy", "burj", "capital-france"],
+        "framingTemplate": "Only answer with a number if you are completely certain it is correct. If you are not sure, say \"I don't know.\"\nQuestion: {query}\nAnswer:"
+      },
+      "passCriteria": {
+        "metric": "confidenceDropPredictionAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.65, "stars": 2 },
+        { "threshold": 0.9, "stars": 3 }
+      ],
+      "xpReward": 50,
+      "hints": [
+        "This isn't a one-way effect — asking the model to be cautious does not reliably lower its confidence on every wrong answer, and it never once makes the model actually say \"I don't know.\"",
+        "There's no reliable rule for which of these six respond and which don't — the same six words of caution shrink some hallucinations by 20+ points while growing others by nearly as much, on facts that look otherwise similar.",
+        "Checked directly against the real model, none of these six ever said \"I don't know\": confidence really dropped hardest for the banana's color (70.2% → 43.8%), the Great Barrier Reef's length (58.8% → 35.7%), and the Amazon's length (53.0% → 33.0%) — but it really rose for Italy's capital (55.6% → 74.3%), the Burj Khalifa's height (61.3% → 72.2%), and France's capital (58.1% → 61.9%)."
+      ]
+    }
+  ]
+}

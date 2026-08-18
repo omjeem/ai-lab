@@ -322,6 +322,15 @@
           "tier": "browser-heavy",
           "xpReward": 135,
           "unlockRequires": ["8-1-quantization"]
+        },
+        {
+          "id": "8-3-calibration-hallucination",
+          "title": "Calibration & Hallucination",
+          "order": 3,
+          "file": "world-8-efficiency-safety/8-3-calibration-hallucination.json",
+          "tier": "browser-light",
+          "xpReward": 135,
+          "unlockRequires": ["8-2-context-length"]
         }
       ]
     }

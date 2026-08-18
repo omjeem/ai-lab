@@ -16,7 +16,7 @@ import {
 
 describe('curriculum access', () => {
   it('exposes every chapter', () => {
-    expect(allGames()).toHaveLength(28);
+    expect(allGames()).toHaveLength(29);
     expect(getGame('1-1-vectors')?.chapterTitle).toBe('What is a Vector?');
     expect(getGame('nope')).toBeNull();
   });
@@ -29,9 +29,9 @@ describe('curriculum access', () => {
 
   it('orders chapters for play', () => {
     const ordered = orderedChapters();
-    expect(ordered).toHaveLength(28);
+    expect(ordered).toHaveLength(29);
     expect(ordered[0]!.id).toBe('1-1-vectors');
-    expect(ordered.at(-1)!.id).toBe('8-2-context-length');
+    expect(ordered.at(-1)!.id).toBe('8-3-calibration-hallucination');
   });
 
   it('walks to the next chapter, across a world boundary', () => {
@@ -42,7 +42,8 @@ describe('curriculum access', () => {
     expect(nextChapterAfter('7-3-tool-calling')?.id).toBe('7-4-agent-loop');
     expect(nextChapterAfter('7-4-agent-loop')?.id).toBe('8-1-quantization');
     expect(nextChapterAfter('8-1-quantization')?.id).toBe('8-2-context-length');
-    expect(nextChapterAfter('8-2-context-length')).toBeNull();
+    expect(nextChapterAfter('8-2-context-length')?.id).toBe('8-3-calibration-hallucination');
+    expect(nextChapterAfter('8-3-calibration-hallucination')).toBeNull();
   });
 });
 
@@ -121,7 +122,7 @@ describe('progress summary', () => {
     expect(summary.rank.title).toBe('Gradient Novice');
     expect(summary.chaptersCompleted).toBe(0);
     expect(summary.starsEarned).toBe(0);
-    expect(summary.starsPossible).toBe(84);
+    expect(summary.starsPossible).toBe(87);
   });
 
   it('promotes through the ranks with XP', () => {

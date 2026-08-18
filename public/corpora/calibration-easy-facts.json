@@ -1,0 +1,144 @@
+{
+  "facts": [
+    {
+      "id": "capital-france",
+      "topic": "Capital of France",
+      "sentences": [
+        "Paris is the capital and most populous city of France.",
+        "It has been the country's political center for centuries."
+      ],
+      "query": "What is the capital of France?",
+      "answer": "Paris"
+    },
+    {
+      "id": "capital-japan",
+      "topic": "Capital of Japan",
+      "sentences": [
+        "Tokyo is the capital and largest city of Japan.",
+        "It is one of the most populous metropolitan areas in the world."
+      ],
+      "query": "What is the capital of Japan?",
+      "answer": "Tokyo"
+    },
+    {
+      "id": "opposite-hot",
+      "topic": "Opposite of Hot",
+      "sentences": [
+        "The opposite of hot is cold.",
+        "Temperature scales place cold and hot at opposite ends of the same range."
+      ],
+      "query": "What is the opposite of hot?",
+      "answer": "cold"
+    },
+    {
+      "id": "sky-color",
+      "topic": "Color of a Clear Sky",
+      "sentences": [
+        "On a clear day, the sky appears blue.",
+        "This happens because air molecules scatter blue light from the sun more than other colors."
+      ],
+      "query": "What color does a clear sky appear during the day?",
+      "answer": "blue"
+    },
+    {
+      "id": "grass-color",
+      "topic": "Color of Grass",
+      "sentences": [
+        "Healthy grass appears green.",
+        "Chlorophyll in its cells absorbs other colors of light and reflects green."
+      ],
+      "query": "What color is healthy grass?",
+      "answer": "green"
+    },
+    {
+      "id": "red-planet",
+      "topic": "The Red Planet",
+      "sentences": [
+        "Mars is often called the Red Planet because of its reddish appearance.",
+        "Iron oxide, or rust, covers much of its surface."
+      ],
+      "query": "Which planet is known as the Red Planet?",
+      "answer": "Mars"
+    },
+    {
+      "id": "closest-planet",
+      "topic": "Planet Closest to the Sun",
+      "sentences": [
+        "Mercury is the planet closest to the Sun.",
+        "It completes an orbit in just 88 Earth days."
+      ],
+      "query": "Which planet is closest to the Sun?",
+      "answer": "Mercury"
+    },
+    {
+      "id": "largest-ocean",
+      "topic": "Largest Ocean",
+      "sentences": [
+        "The Pacific Ocean is the largest and deepest ocean on Earth.",
+        "It covers more area than all of Earth's land combined."
+      ],
+      "query": "Which ocean is the largest on Earth?",
+      "answer": "Pacific"
+    },
+    {
+      "id": "capital-italy",
+      "topic": "Capital of Italy",
+      "sentences": [
+        "Rome is the capital city of Italy.",
+        "It was once the center of the Roman Empire."
+      ],
+      "query": "What is the capital of Italy?",
+      "answer": "Rome"
+    },
+    {
+      "id": "capital-germany",
+      "topic": "Capital of Germany",
+      "sentences": [
+        "Berlin is the capital and largest city of Germany.",
+        "It became the reunified nation's capital again in 1990."
+      ],
+      "query": "What is the capital of Germany?",
+      "answer": "Berlin"
+    },
+    {
+      "id": "largest-planet",
+      "topic": "Largest Planet",
+      "sentences": [
+        "Jupiter is the largest planet in the Solar System.",
+        "It is a gas giant more than twice as massive as every other planet combined."
+      ],
+      "query": "Which planet is the largest in the Solar System?",
+      "answer": "Jupiter"
+    },
+    {
+      "id": "heart-organ",
+      "topic": "Organ That Pumps Blood",
+      "sentences": [
+        "The heart pumps blood through the human body.",
+        "It beats roughly 100,000 times a day."
+      ],
+      "query": "Which organ pumps blood through the human body?",
+      "answer": "heart"
+    },
+    {
+      "id": "banana-color",
+      "topic": "Color of a Ripe Banana",
+      "sentences": [
+        "A ripe banana is yellow.",
+        "Its peel turns from green to yellow as it ripens."
+      ],
+      "query": "What color is a ripe banana?",
+      "answer": "yellow"
+    },
+    {
+      "id": "fastest-animal",
+      "topic": "Fastest Land Animal",
+      "sentences": [
+        "The cheetah is the fastest land animal.",
+        "It can reach speeds of over 100 kilometers per hour in short bursts."
+      ],
+      "query": "What is the fastest land animal?",
+      "answer": "cheetah"
+    }
+  ]
+}

@@ -1,13 +1,13 @@
 ---
 name: ailab-canvas-workflow
-description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json, splitting weights into external data, or failing session creation only in onnxruntime-web's WASM backend), a general engine-correctness check for any canvas with a live-adjustable parameter, a ModelGate trap specific to canvases whose levels don't all need the same model, why Node calibration must use dtype q8 not fp32, and what to do when a chapter needs WebGPU and this environment can't reliably provide it. Load this before touching any World 5/6/7 canvas, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md and plan-docs/EXPANSION-PLAN.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
+description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json, splitting weights into external data, or failing session creation only in onnxruntime-web's WASM backend), a general engine-correctness check for any canvas with a live-adjustable parameter, a ModelGate trap specific to canvases whose levels don't all need the same model (including a second one for two models loaded at once), why Node calibration must use dtype q8 not fp32 and still isn't a perfect proxy for a real browser near a model's decision boundary, a long-single-prompt heavy-workload risk distinct from many-short-generations, why a chapter's durable progress survives a localStorage clear, and what to do when a chapter needs WebGPU and this environment can't reliably provide it. Load this before touching any World 5/6/7/8 canvas, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md and plan-docs/EXPANSION-PLAN.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
 ---
 
 # AI Learning Lab canvas workflow
 
-Process notes from building canvases 14 through 20 (all of Worlds 1–6, 22 chapters) plus World 7's
-first four chapters (7-1 through 7-4) — specifically the parts that cost real time and aren't in
-`plan-docs/REMAINING-WORK.md` (which covers per-chapter findings for Worlds 1–6) or
+Process notes from building canvases 14 through 20 (all of Worlds 1–6, 22 chapters), World 7's four
+chapters (7-1 through 7-4), and World 8's first two (8-1, 8-2) — specifically the parts that cost real
+time and aren't in `plan-docs/REMAINING-WORK.md` (which covers per-chapter findings for Worlds 1–6) or
 `plan-docs/EXPANSION-PLAN.md` (the same, for World 7/8). Still worth reading before *revisiting* any
 canvas: the same model-loading and verification traps apply to fixes as much as to first builds.
 
@@ -88,15 +88,36 @@ No browser is preinstalled in this environment.
       one `Runtime.evaluate` call, not a full mousedown/hit-test/mouseup CDP round-trip, so it doesn't
       block on the same starved acknowledgement. Then wait on a real structural signal that the async
       work actually finished (e.g. the busy button's text reverting), not a fixed delay.
+  - **A single long prompt is a *different* heavy-workload risk than many short generations, and a
+    Node q8 timing probe badly underestimates it.** Found building World 8.2's needle-in-haystack
+    level: a Node q8 script decoding against 6 haystack lengths up to 1,300 real filler words
+    estimated a manageable ~40–70s total; the real browser instead took **364 seconds** just to reach
+    a playable board — not a hang (`ps` showed the Chromium renderer process genuinely pegged at
+    100%+ CPU the whole time), but a real cost this environment's WASM execution provider pays for
+    long-context forward passes that Node's native onnxruntime does not reproduce at anywhere near the
+    same ratio. §5's q8-not-fp32 lesson generalises: for anything that grows the *prompt itself* (not
+    just the generation count), treat a Node timing estimate as a rough floor, not a real browser
+    estimate, and prefer cutting the workload (fewer/shorter real lengths) over just raising a
+    verification timeout — a real player faces the same slow load, not just the test script.
   - **A persistent Playwright context avoids re-downloading the model on every verification run.**
     `chromium.launch()` + `browser.newPage()` creates a fresh, ephemeral profile every time, so the
     Cache API entry from `useBrowserCache = true` never survives between script runs — every run
     redownloads the full model. Use `chromium.launchPersistentContext(profileDir, {})` with a fixed
     directory under the scratchpad instead; the model then downloads once and every subsequent run
     reuses it, both far faster to iterate on and closer to what a real returning player experiences.
-    Chapter progress (localStorage) does persist too, so clear only that between runs if a clean start
-    matters: `await page.evaluate(() => localStorage.clear())` right after the first `goto` — this
-    leaves the Cache API (model weights) untouched.
+    Chapter progress does persist too, but **not in `localStorage`** — correcting this in place, found
+    repeatedly while verifying World 8.2: a chapter's durable per-level completion record lives in
+    IndexedDB (Zustand's persisted store, per the README's own "Zustand persisted to IndexedDB for
+    progress" line), so `page.evaluate(() => localStorage.clear())` does **not** give a clean start.
+    A fresh `page.goto` after playing partway through a chapter resumes directly at the next
+    **incomplete** level's concept screen — skipping level 1 entirely if it was already passed in an
+    earlier run against the same profile — or, if every level in the chapter was already passed, at
+    whatever level's board was last open, with no concept screen at all. Never assume "reload → level
+    1"; check at runtime instead (`await page.getByRole('button', {name: 'Begin'}).isVisible()`) and
+    only click `Begin` when the concept screen is actually the thing on screen. If a genuinely clean
+    per-chapter restart is needed, clearing IndexedDB (`indexedDB.databases()` then `deleteDatabase`
+    per entry, inside `page.evaluate`) is the real fix — not attempted in this session since every
+    verification here worked fine by adapting to whichever level a reload actually resumed at.
   - **Don't run a heavy Node model-calibration script and a live Playwright verification against the
     dev server at the same time.** Found while verifying World 7.4: running several
     `AutoModelForCausalLM.from_pretrained` Node scripts concurrently with `next dev` starved the dev
@@ -155,6 +176,18 @@ after a full config-borrowing attempt (§6). If the graph's weights are split in
 file, this fails with a `filesystem error` unless the two files sit in the same directory under
 their **original** names (`model.onnx` + `model.onnx.data`) — rename downloaded files back to that
 if you fetched them under a different local filename.
+
+**Token ids can come back as `bigint` in a Node script, silently breaking array indexing.** Found
+building World 8.1's teacher-forced surprisal probe: `tokenizer(text).input_ids`'s `.tolist()` can
+return `bigint` entries (not plain `number`) for an int64 tensor under Node's onnxruntime backend.
+Using such a value directly as an array index (`fullProbs[tokenId]`) doesn't throw — it just silently
+returns `undefined`, which then silently becomes `0` or `NaN` a few steps later, producing plausible
+but wrong numbers with no error to flag the cause. It also breaks `JSON.stringify` outright
+(`TypeError: Do not know how to serialize a BigInt`), which is a more helpful failure since at least
+it's loud. Coerce with `Number(id)` (or `typeof id === 'bigint' ? Number(id) : id`) on every token id
+read out of a tensor before using it as an index, comparing it, or logging it — cheap insurance, and
+the app's own browser-side wrappers (`toNestedArray` et al.) have not shown this specific issue, but
+it costs nothing to guard for it in new Node-only calibration code either.
 
 ## 3. Finding an alternate ONNX export when a model doesn't expose what's needed
 
@@ -250,6 +283,31 @@ manifests in the real WASM execution provider), a real browser run is the fallba
 but q8-in-Node is almost always fast enough to be the first move, and is what actually caught both
 regressions above well before a slow browser round-trip would have.
 
+**A naive per-token confidence/surprisal probe is dominated by the tokenization's own leading
+formatting token, not by whether the model knows the answer.** Found building World 8.1's
+teacher-forced perplexity-proxy level: reading the model's real probability for the *first* token of
+a tokenized answer (`" 2,300"` → its first BPE token) measured almost pure noise across 8 real facts,
+because that first token is a generic leading-space/formatting token nearly every answer shares
+regardless of content — the metric was really answering "does this precision start a response the
+same way," not "does it know the digits." Once the first token of the real tokenized continuation was
+excluded from the average (teacher-forced, reading each subsequent step's probability off the real
+full-vocabulary softmax), the intended signal appeared cleanly and consistently. Any future level that
+scores "confidence in a specific real answer" via teacher-forced surprisal should isolate the *content*
+tokens the same way — check what the tokenizer's first token of the target continuation actually
+decodes to before trusting a metric built on it.
+
+**A fragile, near-the-decision-boundary case can flip *qualitatively* between Node q8 and a real
+browser, not just drift by a small margin.** Every other Node-vs-browser gap already documented in
+this project (7-1's margin readout, 7-4's "62 times 14") was a small numeric delta that stayed inside
+the same star band. Building World 8.2's level 3, a Node q8 probe found one specific
+target/distractor/order combination genuinely deriving the wrong answer; testing that *exact* same
+combination directly in a real Chromium browser found it answering correctly — not a small drift, a
+full flip of pass/fail for the one case the whole level's "hard" mechanic depended on. Node q8 is
+still the right first move (fast iteration, catches the big, structural findings reliably), but for
+anything this close to the model's own decision boundary — a distractor that only sometimes derails an
+answer, a threshold sitting right at a real measured value — **re-confirm the exact combinations a
+level will score directly in a live browser before shipping**, not just a representative sample.
+
 ## 6. Loading a model whose repo is missing config.json/tokenizer, or splits weights into external data
 
 Found unblocking canvas 17 (`yaww85/all-MiniLM-L6-v2-hidden-states-exposed-v1`) — two gotchas that
@@ -307,6 +365,20 @@ useEffect(() => { if (!needsModel) void load(); }, [needsModel, load]);
 return <ModelGate modelId={needsModel ? EMBEDDING_MODEL_ID : null} load={load}>...</ModelGate>;
 ```
 Worth checking first in any future chapter whose levels don't all need the same model.
+
+**A related gap, hit building World 8.1: `ModelGate` was built assuming one model per chapter, and
+has no way to show progress for two loaded at once.** 8.1 needs two full real instances of the same
+model (an fp32 reference and a q8 quantized variant) loaded together for its speed-comparison level.
+`ModelGate`'s `modelId` prop can only subscribe to one progress stream at a time
+(`subscribeToModelLoads` filters by a single id). No custom dual-progress UI was built to fix this —
+the pragmatic real fix used here: pass the **larger, slower** download's id as `modelId` (so the
+visible progress bar tracks the one that actually dominates the wait), and have `load()` fetch that
+one first, then the second inside the same callback, sequentially. The second model's real download
+still happens and still succeeds — it just has no visible progress bar of its own once the first
+finishes, and the "Loading the model" screen's breathing-square animation (which isn't tied to
+progress at all) keeps the screen from looking frozen in the meantime. Fine for two models where one
+clearly dominates; would need real UI work if a future chapter needed two comparably-sized models
+loaded with equally-informative progress.
 
 ## 8. A quantized ONNX file can load fine under Node and still fail in the browser's WASM backend
 
@@ -379,3 +451,15 @@ Don't spend more time chasing browser flags trying to force it — instead:
   WebGPU) is a different situation and usually *is* testable — check `.env` for a real key before
   assuming it isn't; canvas 20's Ollama Cloud round trip was fully exercisable this way even though
   the local WebLLM half was not.
+
+## 10. A stateful fake dependency can leak real state across unit tests
+
+Found writing World 8.1's engine test: a `PrecisionModelDep` fake whose `ensureLoaded()` deliberately
+mimics the real one's idempotence (returns a real duration on first call, `0` once "loaded") was
+declared once at `describe`-block scope and reused across two `it()` blocks. The first test's call
+left the fake's internal `loaded` flag `true`, so the second test's "real" load-time assertions
+silently read back `0` instead of the fixture's configured value — not a crash, a quietly wrong
+number that only surfaced because the test's own expected value didn't match it. Any fake dependency
+that carries state across calls to mirror real caching/loading behaviour (a `loaded` flag, a call
+counter, anything not reset between invocations) needs a **fresh instance per test**, not a shared
+one at `describe` scope — build it in a small factory function and call that inside each `it()`.

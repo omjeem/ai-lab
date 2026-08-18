@@ -339,6 +339,12 @@ network:
 - Activity is queued locally and synced when connectivity returns. The sync manager treats
   `navigator.onLine` and a real request to `/api/activity` as two separate signals, and clears only
   the event ids the server confirms.
+- The sync manager's recurring timer (`src/lib/syncManager.ts`, every 30s by default) only probes
+  `/api/activity` when the local queue actually has something in it (`queueSize()`, already
+  exported from `src/lib/offlineQueue.ts`) — an idle device with nothing new to report doesn't keep
+  making network requests forever. The initial check on mount, and the ones triggered by the
+  browser's `online`/`visibilitychange` events, still probe unconditionally, since those are
+  real signals worth refreshing the connectivity indicator on, not blind polling.
 - World 6's cloud toggle is disabled while offline; the local model beside it keeps working.
 
 Verified for real: `pnpm build && pnpm start`, open a World 1 chapter through the map so its model

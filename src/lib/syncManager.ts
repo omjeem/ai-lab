@@ -8,7 +8,7 @@
  * by two signals, since `navigator.onLine` reports "connected to something",
  * not "can reach this app" (Section 9).
  */
-import { clearSynced, readQueue } from './offlineQueue';
+import { clearSynced, queueSize, readQueue } from './offlineQueue';
 import type { ActivityIngestResponse } from '@/types/activity';
 
 const SYNC_INTERVAL_MS = 30_000;
@@ -71,9 +71,17 @@ export function startSyncManager(options: SyncManagerOptions = {}): () => void {
   let stopped = false;
   let running = false;
 
-  const attempt = async () => {
+  const attempt = async (opts: { requireQueue?: boolean } = {}) => {
     // Never overlap two syncs; a slow request would otherwise double-send.
     if (stopped || running) return;
+    // The recurring timer tick only bothers probing connectivity when there is
+    // something to send — otherwise this fires an HTTP request every interval
+    // forever, even on a device that hasn't queued anything in hours. The
+    // initial mount call and the online/visibility handlers skip this check:
+    // they're event-driven, not blind polling, and the connectivity indicator
+    // should still refresh promptly when one of those genuinely fires.
+    if (opts.requireQueue && (await queueSize()) === 0) return;
+
     running = true;
     try {
       const online = await checkConnectivity();
@@ -90,7 +98,7 @@ export function startSyncManager(options: SyncManagerOptions = {}): () => void {
   };
 
   void attempt();
-  const timer = setInterval(() => void attempt(), interval);
+  const timer = setInterval(() => void attempt({ requireQueue: true }), interval);
 
   const handleOnline = () => void attempt();
   const handleOffline = () => options.onConnectivityChange?.(false);

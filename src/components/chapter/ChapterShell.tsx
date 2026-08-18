@@ -40,7 +40,8 @@ export interface PrerequisiteGap {
 
 export interface ChapterShellProps {
   game: GameDefinition;
-  /** Present whenever this chapter is being played without its prerequisites met — via "Play anyway" or a shared link — so the persistent reminder banner renders. */
+  /** Present whenever this chapter is being played without its prerequisites met —
+   *  shows a dismissible strip banner at the top of the instrument area. */
   prerequisiteGap?: PrerequisiteGap;
   /** Renders the level's own canvas and controls. */
   children: (props: GameRenderProps) => ReactNode;
@@ -288,13 +289,14 @@ function ChapterBar({
   );
 }
 
+
 /* ── prerequisite-gap banner ────────────────────────────────── */
 
 /**
- * Stays up for as long as this chapter is being played without its
- * prerequisites met (jumped ahead or shared into) — a dismiss just hides it
- * for this visit; reopening or reloading the chapter shows it again, since
- * the underlying gap hasn't actually closed.
+ * A dismissible one-line strip shown at the top of the instrument area when a
+ * player opens a chapter without completing its prerequisites (via direct URL,
+ * bookmark, back-button, or share link). It stays up for the session; dismissing
+ * hides it for this visit only, since the underlying gap hasn't closed.
  */
 function PrerequisiteGapBanner({
   gap,

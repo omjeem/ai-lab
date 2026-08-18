@@ -123,6 +123,26 @@ never reach the browser.
 /tests/                 Mirrors src/engines, src/models and src/lib
 ```
 
+### The two rules that shape everything
+
+**Game logic lives in JSON, never in components.** Every level's parameters, pass criteria and star
+bands come from `/data/games/**`. Components render engine state; they never own rules.
+
+**Engines are pure and take their models by injection.** An engine never imports a model wrapper.
+It receives one through a `prepare(config, deps)` parameter, which is why the whole test suite runs
+offline in about a second with no downloads, while the app injects the real transformers.js wrapper
+into the identical code path.
+
+```ts
+// Every engine exposes the same shape.
+prepare(config, deps)          // optional; runs the real model, returns derived data
+initState(config, rules, prepared)
+applyAction(state, action)     // pure reducer, never mutates
+evaluate(state) → ScoreResult
+```
+
+---
+
 ## Navigation, unlocking and sharing
 
 A chapter's `unlockRequires` graph (`src/lib/curriculum.ts`) still drives everything about
@@ -158,23 +178,31 @@ blocks navigation outright.
   flag distinguishing "shared a chapter you'd already unlocked" from "the link let someone skip a
   gate").
 
-### The two rules that shape everything
+---
 
-**Game logic lives in JSON, never in components.** Every level's parameters, pass criteria and star
-bands come from `/data/games/**`. Components render engine state; they never own rules.
+## SEO
 
-**Engines are pure and take their models by injection.** An engine never imports a model wrapper.
-It receives one through a `prepare(config, deps)` parameter, which is why the whole test suite runs
-offline in about a second with no downloads, while the app injects the real transformers.js wrapper
-into the identical code path.
+Every chapter page (`src/app/(game)/world/[worldId]/chapter/[chapterId]/page.tsx`) is its own
+independently indexable page, not a shared template:
 
-```ts
-// Every engine exposes the same shape.
-prepare(config, deps)          // optional; runs the real model, returns derived data
-initState(config, rules, prepared)
-applyAction(state, action)     // pure reducer, never mutates
-evaluate(state) → ScoreResult
-```
+- `generateMetadata` sets a real per-chapter `title`, `description` (the chapter's own
+  `concept.shortExplanation`), `keywords` (`deriveChapterKeywords()` in `src/lib/seo.ts`), a
+  canonical URL, and a **full** `openGraph`/`twitter` object — not a partial one. Next.js replaces
+  rather than merges a parent layout's metadata per key, so a chapter route that returned only
+  `{ title, description }` for `openGraph` was silently dropping the root layout's `type`/`url`/
+  `siteName`/`summary_large_image` card the moment it touched that key at all.
+- Each page also renders a `LearningResource` JSON-LD block (`teaches`, `isPartOf` the course) —
+  same technique as the root page's `Course` schema in `src/app/page.tsx`, but naming the specific
+  thing that one page teaches, which is the structured-data signal a topical search ("vectors
+  explanation") actually keys off.
+- `deriveChapterKeywords()` is **derived**, not hand-authored per chapter: Google's `keywords` meta
+  tag hasn't affected ranking since ~2009, and the root layout already applies a site-wide keyword
+  list to every page, so this exists to make the tag chapter-specific, not to fill a "zero
+  keywords" gap. A curated field in each chapter's JSON would need a schema change and 26+ files of
+  upkeep for a tag with no measurable ranking benefit.
+- `src/app/sitemap.ts` and `robots.ts` already list/allow every chapter URL — no changes needed
+  there. The real remaining lever after this is off-page (backlinks, domain authority) and time —
+  nothing left here is a code problem.
 
 ---
 

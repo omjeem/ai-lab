@@ -32,3 +32,28 @@ export const SITE_KEYWORDS = [
   'machine learning from scratch',
   'learn large language models',
 ];
+
+/**
+ * Chapter-specific search terms, derived rather than hand-authored per
+ * chapter. Google's `keywords` meta tag has had no ranking effect since
+ * ~2009, and the root layout already applies `SITE_KEYWORDS` to every page —
+ * so this exists to make each chapter's tag chapter-specific rather than to
+ * fill a "zero keywords" gap. A curated per-chapter field in the JSON would
+ * need a schema change, a validator rule to keep it from rotting, and 26+
+ * files of upkeep for a tag with no measurable ranking benefit; deriving it
+ * from data that's already real (and already kept current) costs nothing to
+ * maintain as the curriculum grows.
+ */
+export function deriveChapterKeywords(game: {
+  chapterTitle: string;
+  worldTitle: string;
+}): string[] {
+  const terms = [
+    game.chapterTitle,
+    `${game.chapterTitle} explained`,
+    `learn ${game.chapterTitle.toLowerCase()}`,
+    game.worldTitle,
+    ...SITE_KEYWORDS.slice(0, 5),
+  ];
+  return Array.from(new Set(terms));
+}

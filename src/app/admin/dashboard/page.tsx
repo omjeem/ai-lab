@@ -7,6 +7,7 @@ import { Button, Heading, Meter, Panel, Readout, Tag, cx } from '@/components/ui
 import type { AdminUserRow } from '@/types/user';
 import type { ActivityEvent } from '@/types/activity';
 import type { ChapterAnalyticsRow } from '@/lib/adminAnalytics';
+import type { AdminFeedbackRow } from '@/types/feedback';
 
 interface UsersResponse {
   ok: boolean;
@@ -30,9 +31,18 @@ interface ChapterAnalyticsResponse {
   error?: string;
 }
 
+interface FeedbackResponse {
+  ok: boolean;
+  total: number;
+  page: number;
+  size: number;
+  feedback: AdminFeedbackRow[];
+  error?: string;
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [tab, setTab] = useState<'users' | 'chapters'>('users');
+  const [tab, setTab] = useState<'users' | 'chapters' | 'feedback'>('users');
   const [data, setData] = useState<UsersResponse | null>(null);
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +97,12 @@ export default function AdminDashboardPage() {
             onClick={() => setTab('chapters')}
           >
             Chapter analytics
+          </Button>
+          <Button
+            variant={tab === 'feedback' ? 'primary' : 'ghost'}
+            onClick={() => setTab('feedback')}
+          >
+            Feedback
           </Button>
         </div>
 
@@ -160,8 +176,10 @@ export default function AdminDashboardPage() {
               </Button>
             </div>
           </>
-        ) : (
+        ) : tab === 'chapters' ? (
           <ChapterAnalyticsPanel />
+        ) : (
+          <FeedbackPanel />
         )}
       </main>
 
@@ -394,6 +412,83 @@ function ChapterAnalyticsPanel() {
         </table>
       </div>
     </Panel>
+  );
+}
+
+/** Free-form feedback submitted from the chapter-completion screen, newest first. */
+function FeedbackPanel() {
+  const router = useRouter();
+  const [data, setData] = useState<FeedbackResponse | null>(null);
+  const [page, setPage] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch(`/api/admin/feedback?page=${page}&size=25`);
+        if (response.status === 401) {
+          router.push('/admin/login');
+          return;
+        }
+        const payload = (await response.json()) as FeedbackResponse;
+        if (payload.ok) setData(payload);
+        else setError(payload.error ?? 'Could not load feedback');
+      } catch {
+        setError('Could not reach the server');
+      }
+    })();
+  }, [page, router]);
+
+  if (error) {
+    return (
+      <Panel label="error">
+        <p className="text-sm text-bad">{error}</p>
+      </Panel>
+    );
+  }
+
+  const pages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-8 border-b border-line pb-4">
+        <Readout label="total feedback" value={data?.total ?? '—'} size="lg" tone="accent" />
+        <Readout label="page" value={`${(data?.page ?? 0) + 1}/${pages}`} size="md" />
+      </div>
+
+      <Panel label="feedback" flush>
+        <ol className="divide-y divide-line-faint">
+          {data?.feedback.map((row) => (
+            <li key={row.feedbackId} className="flex flex-col gap-1.5 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="readout text-[10px] text-muted">{formatDate(row.receivedAt)}</span>
+                <span className="text-xs text-primary">{row.displayName ?? 'anonymous'}</span>
+                <span className="readout text-[10px] text-muted">{row.userId.slice(0, 8)}…</span>
+                {row.email && <Tag tone="accent">{row.email}</Tag>}
+                {row.chapterTitle && <Tag>{row.chapterTitle}</Tag>}
+              </div>
+              <p className="whitespace-pre-wrap text-xs leading-relaxed text-secondary">
+                {row.message}
+              </p>
+            </li>
+          ))}
+          {data?.feedback.length === 0 && (
+            <li className="px-4 py-8 text-center text-xs text-muted">No feedback submitted yet</li>
+          )}
+        </ol>
+      </Panel>
+
+      <div className="flex items-center gap-2">
+        <Button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+          <ChevronLeft size={13} strokeWidth={2} />
+          Previous
+        </Button>
+        <Button onClick={() => setPage((p) => p + 1)} disabled={page + 1 >= pages}>
+          Next
+          <ChevronRight size={13} strokeWidth={2} />
+        </Button>
+      </div>
+    </>
   );
 }
 

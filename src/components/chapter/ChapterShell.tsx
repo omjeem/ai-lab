@@ -24,6 +24,7 @@ import { enqueueActivity } from '@/lib/offlineQueue';
 import { playChapterCompleteTone, playCorrectTone } from '@/lib/sound';
 import { Button, Heading, Panel, Readout, StarRating, Tag, cx } from '@/components/ui';
 import { ShareButton } from '@/components/ui/ShareButton';
+import { ChapterFeedback } from '@/components/chapter/ChapterFeedback';
 
 export interface GameRenderProps {
   level: GameLevel;
@@ -67,6 +68,7 @@ export function ChapterShell({ game, prerequisiteGap, children }: ChapterShellPr
   const [gapDismissed, setGapDismissed] = useState(false);
 
   const userId = useGameProgressStore((s) => s.userId);
+  const displayName = useGameProgressStore((s) => s.displayName);
   const recordLevel = useGameProgressStore((s) => s.recordLevel);
   const completeChapter = useGameProgressStore((s) => s.completeChapter);
   const soundEnabled = useGameProgressStore((s) => s.soundEnabled);
@@ -234,6 +236,8 @@ export function ChapterShell({ game, prerequisiteGap, children }: ChapterShellPr
           <AhaReveal
             game={game}
             reduce={reduce ?? false}
+            userId={userId}
+            displayName={displayName}
             nextHref={
               nextChapter
                 ? `/world/${nextChapter.id.split('-')[0]}/chapter/${nextChapter.id}`
@@ -599,11 +603,15 @@ function HintPanel({
 function AhaReveal({
   game,
   reduce,
+  userId,
+  displayName,
   nextHref,
   nextLabel,
 }: {
   game: GameDefinition;
   reduce: boolean;
+  userId: string | null;
+  displayName: string | null;
   nextHref: string;
   nextLabel: string;
 }) {
@@ -619,7 +627,7 @@ function AhaReveal({
     >
       <motion.div
         data-world={game.world}
-        className="w-full max-w-lg border border-line bg-panel p-6"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto border border-line bg-panel p-6"
         style={{ borderRadius: 'var(--radius-lg)' }}
         initial={reduce ? false : { y: 12, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -632,7 +640,7 @@ function AhaReveal({
 
         <p className="mb-6 text-sm leading-relaxed text-secondary">{game.concept.ahaMoment}</p>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mb-6 flex flex-wrap items-center gap-2">
           <Link href={nextHref}>
             <Button variant="primary">
               {nextLabel}
@@ -643,6 +651,8 @@ function AhaReveal({
             <Button>Map</Button>
           </Link>
         </div>
+
+        {userId && <ChapterFeedback chapterId={game.id} userId={userId} displayName={displayName} />}
       </motion.div>
     </motion.div>
   );

@@ -1,6 +1,7 @@
 import { MongoClient, type Db, type Collection } from 'mongodb';
 import type { UserDocument } from '@/types/user';
 import type { ActivityEvent } from '@/types/activity';
+import type { FeedbackRequest } from '@/types/feedback';
 
 /**
  * One MongoClient for the process.
@@ -53,12 +54,21 @@ export interface ActivityDocument extends ActivityEvent {
   receivedAt: Date;
 }
 
+export interface FeedbackDocument extends FeedbackRequest {
+  /** Server clock, so admin listings sort consistently regardless of client clock skew. */
+  receivedAt: Date;
+}
+
 export async function usersCollection(): Promise<Collection<UserDocument>> {
   return (await getDatabase()).collection<UserDocument>('users');
 }
 
 export async function activityCollection(): Promise<Collection<ActivityDocument>> {
   return (await getDatabase()).collection<ActivityDocument>('activity');
+}
+
+export async function feedbackCollection(): Promise<Collection<FeedbackDocument>> {
+  return (await getDatabase()).collection<FeedbackDocument>('feedback');
 }
 
 /**
@@ -81,6 +91,9 @@ async function ensureIndexes(db: Db): Promise<void> {
       db.collection('activity').createIndex({ eventId: 1 }, { unique: true }),
       // Backs the admin per-chapter analytics aggregation (group by chapterId + type).
       db.collection('activity').createIndex({ chapterId: 1, type: 1 }),
+      // The admin feedback tab reads newest first; dedupes a resent submission.
+      db.collection('feedback').createIndex({ receivedAt: -1 }),
+      db.collection('feedback').createIndex({ feedbackId: 1 }, { unique: true }),
     ]);
   } catch {
     // A permissions-restricted user may not be allowed to create indexes; the

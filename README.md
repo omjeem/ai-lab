@@ -75,6 +75,7 @@ the admin dashboard, or the cloud escalation.
 | `GEO_LOOKUP_API_KEY` | Optional IP geolocation | Only if your provider needs one. |
 | `RATE_LIMIT_ACTIVITY_PER_MIN` | Tuning | Optional, defaults to `60` per IP. |
 | `RATE_LIMIT_CLOUD_INFERENCE_PER_MIN` | Tuning | Optional, defaults to `10` per IP. |
+| `RATE_LIMIT_FEEDBACK_PER_MIN` | Tuning | Optional, defaults to `10` per IP. |
 
 ### Generating the admin password hash
 

@@ -41,6 +41,7 @@ import g55 from '@data/games/world-5-transformers/5-5-full-transformer.json';
 import g61 from '@data/games/world-6-capstone/6-1-inspector-chat.json';
 import g71 from '@data/games/world-7-grounding-tools/7-1-retrieval.json';
 import g72 from '@data/games/world-7-grounding-tools/7-2-grounded-generation.json';
+import g73 from '@data/games/world-7-grounding-tools/7-3-tool-calling.json';
 
 export const manifest = manifestJson as CurriculumManifest;
 
@@ -51,7 +52,7 @@ const GAMES = [
   g41, g42, g43,
   g51, g52, g53, g54, g55,
   g61,
-  g71, g72,
+  g71, g72, g73,
 ] as unknown as GameDefinition[];
 
 const BY_ID = new Map(GAMES.map((game) => [game.id, game]));

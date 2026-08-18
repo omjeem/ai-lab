@@ -1,12 +1,12 @@
 ---
 name: ailab-canvas-workflow
-description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json, splitting weights into external data, or failing session creation only in onnxruntime-web's WASM backend), a general engine-correctness check for any canvas with a live-adjustable parameter, a ModelGate trap specific to canvases whose levels don't all need the same model, and what to do when a chapter needs WebGPU and this environment can't reliably provide it. Load this before touching any World 5/6 canvas, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
+description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json, splitting weights into external data, or failing session creation only in onnxruntime-web's WASM backend), a general engine-correctness check for any canvas with a live-adjustable parameter, a ModelGate trap specific to canvases whose levels don't all need the same model, why Node calibration must use dtype q8 not fp32, and what to do when a chapter needs WebGPU and this environment can't reliably provide it. Load this before touching any World 5/6/7 canvas, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md and plan-docs/EXPANSION-PLAN.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
 ---
 
 # AI Learning Lab canvas workflow
 
 Process notes from building canvases 14 through 20 (all of Worlds 1–6, 22 chapters) plus World 7's
-first two chapters (7-1, 7-2) — specifically the parts that cost real time and aren't in
+first three chapters (7-1 through 7-3) — specifically the parts that cost real time and aren't in
 `plan-docs/REMAINING-WORK.md` (which covers per-chapter findings for Worlds 1–6) or
 `plan-docs/EXPANSION-PLAN.md` (the same, for World 7/8). Still worth reading before *revisiting* any
 canvas: the same model-loading and verification traps apply to fixes as much as to first builds.
@@ -67,6 +67,46 @@ No browser is preinstalled in this environment.
     a click that never registered). Fix: `waitUntil: 'networkidle'` on the `goto`, and
     `await page.getByRole('button', { name: 'Begin' }).waitFor({ state: 'visible' })` before calling
     `.click()` — don't just click as soon as `goto` resolves.
+  - **A batch of many real generations behind one click can block the browser's main thread long
+    enough that `locator.click()` itself times out** (found calibrating World 7.3's schema-reliability
+    level, a 6-generation batch at `maxTokens: 40`) — the WASM CPU backend's forward passes run
+    synchronously enough to starve the CDP round-trip `locator.click()` waits on for 80+ seconds,
+    reproduced identically in a Node script (same `dtype: 'q8'`, see §10) timed at ~80s for an
+    equivalent batch. This is a real UX problem too, not just a test artifact — a real player would
+    see the same frozen-looking UI with no visible progress. Two fixes, both worth applying together:
+    - In the **app itself**: `await` two `requestAnimationFrame`s right after setting a `busy` state,
+      before starting the heavy decode loop, so "running the real model…" actually paints before the
+      synchronous work begins:
+      ```ts
+      function yieldToPaint(): Promise<void> {
+        return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+      }
+      // setBusy(true); await yieldToPaint(); /* then the heavy loop */
+      ```
+    - In **verification scripts**: dispatch the click via `page.evaluate(() => el.click())` instead of
+      `locator.click()` — a direct DOM `.click()` call only needs the JS execution context to accept
+      one `Runtime.evaluate` call, not a full mousedown/hit-test/mouseup CDP round-trip, so it doesn't
+      block on the same starved acknowledgement. Then wait on a real structural signal that the async
+      work actually finished (e.g. the busy button's text reverting), not a fixed delay.
+  - **A persistent Playwright context avoids re-downloading the model on every verification run.**
+    `chromium.launch()` + `browser.newPage()` creates a fresh, ephemeral profile every time, so the
+    Cache API entry from `useBrowserCache = true` never survives between script runs — every run
+    redownloads the full model. Use `chromium.launchPersistentContext(profileDir, {})` with a fixed
+    directory under the scratchpad instead; the model then downloads once and every subsequent run
+    reuses it, both far faster to iterate on and closer to what a real returning player experiences.
+    Chapter progress (localStorage) does persist too, so clear only that between runs if a clean start
+    matters: `await page.evaluate(() => localStorage.clear())` right after the first `goto` — this
+    leaves the Cache API (model weights) untouched.
+  - **A level's own HUD readout can collide with a canvas's identically-labelled text**, the same
+    ambiguous-text trap as the concept-screen one above but recurring in a new place: `ChapterShell`
+    renders a persistent `Readout` labelled with the level's own `passCriteria.metric` (e.g.
+    `JSONVALIDRATE`) regardless of whether a real result exists yet. Waiting on that label's text
+    resolves instantly, before any real generation finishes — it isn't proof anything ran. Likewise, a
+    persistent "submit blocked" hint like `"get a real generation to validate"` contains the substring
+    `"valid"` and can spuriously match a `text=/valid|invalid/` selector meant for a real result Tag.
+    Scope waits to a structural signal instead (a specific Tag inside the round's own `<section>`, or
+    the busy button leaving its busy state) — never a bare label/metric-name string that might already
+    be on the page for an unrelated reason.
 
 ## 2. Introspecting a real HF model from Node (not the browser)
 
@@ -178,6 +218,29 @@ perfect 3 stars with zero player interaction, because the "good" configuration r
 captured data almost exactly — not obvious from reading the engine, only from actually running it
 against real numbers and checking whether the *default* state already passes. If it does, there's
 nothing for the level to teach.
+
+**Calibrate a causal-LM chapter's Node script with `dtype: 'q8'`, never the library default
+(`fp32`).** This is the single costliest mistake made building World 7.3, worth its own
+callout: `tinyCausalLM.ts` loads with `dtype: backend === 'webgpu' ? 'q4' : 'q8'`, and this
+environment cannot reliably provide WebGPU (§9) — so every real player on the WASM path gets a
+**q8-quantized** model, never the fp32 a bare `AutoModelForCausalLM.from_pretrained(id)` call
+gives you in a throwaway Node script. The gap is not cosmetic: a first pass calibrating 7.3
+entirely against fp32 produced numbers that were simply wrong at the precision the app actually
+ships — a "0 examples fails, 1 example is 100% reliable" story at fp32 dropped to 0% reliable at
+q8 for the identical prompt; a "reorder this list, 100% reliable tool pick" mechanic at fp32
+collapsed to an "always picks the same tool regardless of order" bias at q8. Both had to be
+rebuilt from real q8 data. Always load calibration scripts with the real precision:
+```ts
+const model = await AutoModelForCausalLM.from_pretrained(MODEL_ID, { dtype: 'q8' });
+```
+`AutoModel.from_pretrained` (§2, for output-shape introspection rather than generation behaviour)
+is unaffected by this — dtype doesn't change what output keys/dims a model exposes, only what its
+actual generated content and reliability look like. This matters specifically for **generation
+behaviour**: JSON-validity rates, which of several options a model picks, anything sampled or
+greedy-decoded and graded. If a Node q8 script isn't practical (e.g. checking something that only
+manifests in the real WASM execution provider), a real browser run is the fallback of last resort,
+but q8-in-Node is almost always fast enough to be the first move, and is what actually caught both
+regressions above well before a slow browser round-trip would have.
 
 ## 6. Loading a model whose repo is missing config.json/tokenizer, or splits weights into external data
 

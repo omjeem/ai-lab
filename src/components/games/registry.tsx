@@ -120,6 +120,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./7-2-grounded-generation/GroundedGenerationCanvas').then((m) => m.GroundedGenerationCanvas),
     { ssr: false, loading }
   ),
+  '7-3-tool-calling': dynamic(
+    () => import('./7-3-tool-calling/ToolCallCanvas').then((m) => m.ToolCallCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

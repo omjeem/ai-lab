@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "id": "7-3-tool-calling",
+  "world": 7,
+  "worldTitle": "Grounding & Tools",
+  "chapterTitle": "Structured Output & Tool Calling",
+  "order": 3,
+  "concept": {
+    "shortExplanation": "A model that can call a real tool first has to say, in a machine-readable shape, which tool and with what arguments — usually a JSON object. The tiny model from earlier worlds was never trained hard on this, so its raw output is unreliable: valid one moment, malformed the next. Every JSON string, tool pick and pass/fail below is a real generation from the real model, parsed and validated for real — nothing here is simulated or pre-scored.",
+    "ahaMoment": "A small model's structured-output reliability is not fixed — it swings enormously based on exactly how you prompt it, in ways that are measurable but not always intuitive. Zero worked examples reliably fails; each one you add measurably helps, though real, quantized output stays noisier than a clean before/after story. And tool selection can be dominated by something as unglamorous as which tool you demonstrated most recently, not by whether the model actually understood the task — a genuinely important thing to know before trusting a model to pick tools on its own in 7-4."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 92,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The 135M language model could not be downloaded. It is roughly 90MB — check your connection and available storage, then retry. It runs fully offline once cached."
+  },
+  "xpReward": 135,
+  "unlockRequires": ["7-2-grounded-generation"],
+  "levels": [
+    {
+      "id": "7-3-l1",
+      "title": "Prompt for Valid JSON",
+      "difficulty": "easy",
+      "instructions": "The model must respond to each question below with ONLY a JSON object matching {\"tool\": \"calculator\", \"args\": {\"expression\": string}}. Choose how many worked examples to show it first, then run the real model against all 6 questions and see how often it actually comes back valid.",
+      "engineType": "toolCall",
+      "engineConfig": {
+        "mode": "schema-reliability",
+        "maxTokens": 30,
+        "questions": [
+          "What is 47 plus 89?",
+          "What is 12 times 8?",
+          "What is 200 minus 37?",
+          "What is 62 times 14?",
+          "What is 900 minus 275?",
+          "What is 39 times 51?"
+        ]
+      },
+      "passCriteria": {
+        "metric": "jsonValidRate",
+        "threshold": 0.4,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.4, "stars": 1 },
+        { "threshold": 0.6, "stars": 2 },
+        { "threshold": 0.75, "stars": 3 }
+      ],
+      "xpReward": 40,
+      "hints": [
+        "The model was never told what a valid answer looks like — try showing it one first.",
+        "Real measured behaviour: with zero worked examples, the model never once closes the JSON correctly across all 6 questions — it invents extra keys, repeats itself, or just answers in prose instead. Each worked example you add measurably raises how often it actually validates, though not to a perfect 6 of 6.",
+        "Checked directly against the real model, at the same precision it actually runs at in the browser (not a higher-precision approximation): 0 examples → 0 of 6 valid; 1 example → 3 of 6 valid; 2 examples → 5 of 6 valid. Real, quantized small-model output is noisier than a clean 0%-to-100% story — more examples reliably helps, it just doesn't guarantee perfection."
+      ]
+    },
+    {
+      "id": "7-3-l2",
+      "title": "Pick the Right Tool",
+      "difficulty": "medium",
+      "instructions": "The model must respond with {\"tool\": \"calculator\"} or {\"tool\": \"lookup\"} for each instruction below. You control which tool is listed and demonstrated last, immediately before the model answers. Run the real model and see what it actually picks.",
+      "engineType": "toolCall",
+      "engineConfig": {
+        "mode": "tool-select",
+        "maxTokens": 20,
+        "instructions": [
+          { "text": "What is 84 minus 19?", "expectedTool": "calculator" },
+          { "text": "How deep is the Mariana Trench?", "expectedTool": "lookup" },
+          { "text": "What is 6 times 11?", "expectedTool": "calculator" },
+          { "text": "How tall is the Burj Khalifa?", "expectedTool": "lookup" },
+          { "text": "What is 200 plus 300?", "expectedTool": "calculator" },
+          { "text": "How long is the Great Wall of China?", "expectedTool": "lookup" }
+        ]
+      },
+      "passCriteria": {
+        "metric": "toolPickAccuracy",
+        "threshold": 0.4,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.4, "stars": 1 },
+        { "threshold": 0.6, "stars": 2 },
+        { "threshold": 0.8, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "hints": [
+        "The real model doesn't read each instruction as closely as you'd expect when picking a tool — try noticing which tool you listed and demonstrated last.",
+        "Checked directly, deliberately putting the wrong tool last on purpose: the model followed that ordering anyway, 6 real generations out of 6 — proof this really is about recency, not the instruction's actual meaning.",
+        "The reliable move: for each instruction, put whichever tool actually fits it last. This is not perfectly reliable at the real quantized precision the model runs at in your browser — checked directly, ordering the correct tool last reached the right pick on 4 of these 6 real instructions in one full run. Real, sometimes-noisy small-model behaviour, not a bug to route around."
+      ]
+    },
+    {
+      "id": "7-3-l3",
+      "title": "Fix the Malformed Call",
+      "difficulty": "hard",
+      "instructions": "This exact question, with no worked examples, makes the real model emit broken JSON. Add worked examples and re-test until a real generation actually validates.",
+      "engineType": "toolCall",
+      "engineConfig": {
+        "mode": "retry-fix",
+        "maxTokens": 40,
+        "question": "What is 9 times 6?"
+      },
+      "passCriteria": {
+        "metric": "attemptsToSolve",
+        "threshold": 4,
+        "comparator": "lte"
+      },
+      "starsRules": [
+        { "threshold": 4, "stars": 1 },
+        { "threshold": 2, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 50,
+      "hints": [
+        "This exact prompt, with zero examples, produces broken JSON from the real model — it drops the required \"tool\" field entirely and just guesses at the arguments.",
+        "One worked example, in the same shape you want back, is usually enough to fix it — verified directly against the real model, at the same precision it actually runs at in your browser.",
+        "Checked directly: at 0 examples the real decode is invalid every time (missing \"tool\", e.g. {\"args\": {\"expression\": \"9 times 6\"}}); at 1 example it's valid on the very first real attempt, and stays valid at 2."
+      ]
+    }
+  ]
+}

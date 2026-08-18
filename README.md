@@ -4,9 +4,9 @@ A browser-based course that teaches how language models work by making you opera
 embeddings, real attention weights, real gradients — computed live on your machine and manipulated
 directly, rather than described to you. There is no chatbot anywhere in the learning path.
 
-28 chapters across 8 worlds so far, from "what is a vector" to comparing a model's own quantized
-and full-precision weights against each other. Worlds 1–7 are complete; World 8 (Scale, Efficiency
-& Safety) is in progress — see `plan-docs/EXPANSION-PLAN.md` for what's built and what's next.
+30 chapters across 8 worlds so far, from "what is a vector" to red-teaming the course's own local
+model's instruction-following. Worlds 1–7 are complete; World 8 (Scale, Efficiency & Safety) is in
+progress — see `plan-docs/EXPANSION-PLAN.md` for what's built and what's next.
 
 ---
 
@@ -14,11 +14,11 @@ and full-precision weights against each other. Worlds 1–7 are complete; World 
 
 | Layer | State |
 | --- | --- |
-| Curriculum (28 chapters, 85 levels so far) | Complete for Worlds 1–7, World 8 in progress, schema-validated |
-| Game logic engines (28) | Complete for every chapter built so far, 934 tests passing |
+| Curriculum (30 chapters, 91 levels so far) | Complete for Worlds 1–7, World 8 in progress, schema-validated |
+| Game logic engines (30) | Complete for every chapter built so far, 958 tests passing |
 | Model wrappers (transformers.js, WebLLM, Ollama proxy) | Complete |
 | Core UI shell, world map, onboarding, chapter frame | Complete |
-| Per-chapter game canvases | **28 of 28 built so far** — every chapter in Worlds 1–7, plus World 8's first two |
+| Per-chapter game canvases | **30 of 30 built so far** — every chapter in Worlds 1–7, plus World 8's first four |
 | Backend, admin, offline sync, PWA | Complete |
 | Sound design, offline path, Ollama Cloud and MongoDB round trips | Complete, verified for real |
 
@@ -94,7 +94,7 @@ Paste the line into `.env.local`. The script refuses passwords under 12 characte
 ```bash
 pnpm dev              # validates the curriculum, then starts the dev server
 pnpm build            # validates the curriculum, then builds
-pnpm test             # 934 unit tests, fully offline, no model downloads
+pnpm test             # 958 unit tests, fully offline, no model downloads
 pnpm test:watch
 pnpm test:coverage
 pnpm test:e2e         # one Playwright smoke test — real browser, real model download, opt-in
@@ -112,7 +112,7 @@ never reach the browser.
 ## Project structure
 
 ```
-/data/games/            28 chapter definitions + curriculum-manifest.json
+/data/games/            30 chapter definitions + curriculum-manifest.json
 /public/corpora/        Bundled public-domain text the n-gram and RNN chapters count from
 /scripts/               validate-games, calibrate-levels, hash-password
 /src/engines/           Pure game logic, one module per game type. No React, no DOM.

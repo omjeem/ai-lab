@@ -1,15 +1,16 @@
 ---
 name: ailab-canvas-workflow
-description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json, splitting weights into external data, or failing session creation only in onnxruntime-web's WASM backend), a general engine-correctness check for any canvas with a live-adjustable parameter, a ModelGate trap specific to canvases whose levels don't all need the same model (including a second one for two models loaded at once), why Node calibration must use dtype q8 not fp32 and still isn't a perfect proxy for a real browser near a model's decision boundary, a long-single-prompt heavy-workload risk distinct from many-short-generations, why a chapter's durable progress survives a localStorage clear, and what to do when a chapter needs WebGPU and this environment can't reliably provide it. Load this before touching any World 5/6/7/8 canvas, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md and plan-docs/EXPANSION-PLAN.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
+description: Tooling and debugging workflow for building/verifying AI Learning Lab game canvases in this repo — how to get a real browser running here to test a canvas end-to-end, how to introspect a real HF model from Node without the app's browser-only runtime getting in the way, how to find an alternate ONNX export when a model doesn't expose what a chapter needs (including ones missing config.json, splitting weights into external data, or failing session creation only in onnxruntime-web's WASM backend), a general engine-correctness check for any canvas with a live-adjustable parameter, a ModelGate trap specific to canvases whose levels don't all need the same model (including a second one for two models loaded at once), why Node calibration must use dtype q8 not fp32 and still isn't a perfect proxy for a real browser near a model's decision boundary (recall/instruction-following tasks diverge far more than mechanical ones like attention or timing), a long-single-prompt heavy-workload risk distinct from many-short-generations, why a chapter's durable progress survives a localStorage clear, why a `locator.click()` can hang even before any heavy decode starts and what to click with instead, why a raw coordinate click can silently miss inside a scrollable panel, and what to do when a chapter needs WebGPU and this environment can't reliably provide it. Load this before touching any World 5/6/7/8 canvas, before touching src/models/*.ts, or whenever a model load hangs/fails only in the browser. Complements plan-docs/REMAINING-WORK.md and plan-docs/EXPANSION-PLAN.md (the what/why per chapter) — this is the how, so the same false starts aren't repeated.
 ---
 
 # AI Learning Lab canvas workflow
 
 Process notes from building canvases 14 through 20 (all of Worlds 1–6, 22 chapters), World 7's four
-chapters (7-1 through 7-4), and World 8's first two (8-1, 8-2) — specifically the parts that cost real
-time and aren't in `plan-docs/REMAINING-WORK.md` (which covers per-chapter findings for Worlds 1–6) or
-`plan-docs/EXPANSION-PLAN.md` (the same, for World 7/8). Still worth reading before *revisiting* any
-canvas: the same model-loading and verification traps apply to fixes as much as to first builds.
+chapters (7-1 through 7-4), and World 8's first four (8-1 through 8-4) — specifically the parts that
+cost real time and aren't in `plan-docs/REMAINING-WORK.md` (which covers per-chapter findings for
+Worlds 1–6) or `plan-docs/EXPANSION-PLAN.md` (the same, for World 7/8). Still worth reading before
+*revisiting* any canvas: the same model-loading and verification traps apply to fixes as much as to
+first builds.
 
 ## 1. Verifying a canvas in a real browser (Playwright)
 
@@ -115,9 +116,30 @@ No browser is preinstalled in this environment.
     whatever level's board was last open, with no concept screen at all. Never assume "reload → level
     1"; check at runtime instead (`await page.getByRole('button', {name: 'Begin'}).isVisible()`) and
     only click `Begin` when the concept screen is actually the thing on screen. If a genuinely clean
-    per-chapter restart is needed, clearing IndexedDB (`indexedDB.databases()` then `deleteDatabase`
-    per entry, inside `page.evaluate`) is the real fix — not attempted in this session since every
-    verification here worked fine by adapting to whichever level a reload actually resumed at.
+    per-chapter restart is needed, clearing IndexedDB is the real fix, confirmed working while
+    verifying 8.3/8.4: the whole app shares one database, `ai-learning-lab` (see `DB_NAME` in
+    `src/models/modelCache.ts`), so a plain `indexedDB.deleteDatabase('ai-learning-lab')` inside
+    `page.evaluate` (wrapped in a `Promise` resolving on `onsuccess`/`onerror`/`onblocked`) resets
+    progress cleanly without needing to enumerate every database. This only clears progress/activity
+    bookkeeping, not the cached model weights (those live in the separate Cache API via
+    `useBrowserCache`), so the next run still loads instantly from cache — safe to call before every
+    verification run, not just when debugging a stuck resume.
+  - **A `locator.click()` can hang for the full default timeout on the very first click of a run —
+    the concept screen's own "Begin" button — with every actionability check (visible, enabled,
+    stable) already reported as passing**, a new variant of the "batch of generations starves the CDP
+    round-trip" case above but firing *before* any heavy decode has even started (found verifying World
+    8.3/8.4). Reproduced consistently across fresh headless launches in this environment. The same fix
+    applies even though the trigger is different: dispatch every button click via
+    `page.evaluate(() => el.click())` (a raw DOM click needs only one `Runtime.evaluate` call) rather
+    than `locator.click()`, for every click in a verification script, not just the ones known to follow
+    heavy decode work — cheap insurance once it's clearly not just a live-model-load artifact.
+  - **A raw `page.mouse.click(x, y)` at a `boundingBox()`-derived coordinate can silently miss when the
+    target has scrolled out of the visible container**, landing on whatever *is* at that pixel (or
+    nothing) with no error at all — just a quietly-wrong result (a guess that never registers, an
+    unrelated element that does). `locator.click()` auto-scrolls into view first; a manual coordinate
+    click does not. Call `.scrollIntoViewIfNeeded()` on the locator immediately before reading its
+    `boundingBox()` whenever clicking by coordinate (e.g. as a `page.evaluate`-based workaround to the
+    bullet above) inside any scrollable results panel.
   - **Don't run a heavy Node model-calibration script and a live Playwright verification against the
     dev server at the same time.** Found while verifying World 7.4: running several
     `AutoModelForCausalLM.from_pretrained` Node scripts concurrently with `next dev` starved the dev
@@ -463,3 +485,61 @@ number that only surfaced because the test's own expected value didn't match it.
 that carries state across calls to mirror real caching/loading behaviour (a `loaded` flag, a call
 counter, anything not reset between invocations) needs a **fresh instance per test**, not a shared
 one at `describe` scope — build it in a small factory function and call that inside each `it()`.
+
+## 11. Node q8 calibration is far less trustworthy for "what does this model know/do" than for mechanical properties — verify the real target set directly in a real browser before finalizing
+
+§5 already establishes that Node calibration must use `dtype: 'q8'`, never `fp32`, and that it "is a
+good first pass, never the final word" near a decision boundary. World 8.3 and 8.4 sharpened that into
+something stronger: for **mechanical** properties — attention weights, load/inference timing, a model's
+token-probability distribution shape — Node q8 and browser WASM q8 have matched almost exactly (8.2's
+attention-dilution level matched to three decimal places). For **recall/instruction-following**
+properties — does the model know this specific fact, does it obey this specific rule under this
+specific follow-up text — the two environments diverged far more often and far more dramatically than
+anywhere else in this project, to the point of flipping real, verified-correct facts and real,
+verified-working defenses:
+
+- 8.3 (Calibration & Hallucination): Node found `capital-japan` and `largest-planet` answered
+  incorrectly; a real Chromium run answered both correctly. Node's most dramatic "confidently wrong"
+  example (`capital-italy`, a fabricated city at real 71% confidence) barely resembled its own
+  real-browser behaviour (56%, different wrong answer), and a *different* fact in the same round became
+  the real highest-confidence-wrong case instead.
+- 8.4 (Red-Teaming): Node calibration found only one of four classic attack framings (roleplay) broke
+  a "answer in exactly one word" instruction. A real browser run found **all four** broke it — the
+  premise that "most attacks fail, a clever one succeeds" was itself wrong for this tiny model, not
+  just the specific numbers.
+
+**Consequence for planning any future chapter that scores which specific facts a model does or doesn't
+know, or which specific attacks/defenses do or don't work**: treat Node q8 as a hypothesis generator
+only. Before finalizing which items ship in a level, widen that level's config to the full real
+candidate pool (every fact, every attack, every defense under consideration), run it once for real in
+a real browser, and read the actual per-item results straight off the rendered board — the same
+"temporarily widen the config, sweep for real, narrow back down" move both 8.3 and 8.4 used. Don't
+budget calibration time assuming Node gets you most of the way there for this category of chapter; for
+World 7.3/7.4/8.1/8.2's category (structured-output reliability, quantization/timing/attention), Node
+q8 was reliable enough to design against directly.
+
+## 12. Verify a scoring premise's basic shape against the real model before designing rounds around it — and a defense that's real-ly guaranteed to fail is a legitimate way to keep a level honest
+
+Two related lessons from 8.4, worth separating from §11's calibration-fidelity point because they'd
+still apply even with perfect Node/browser agreement:
+
+- **A level's entire framing can rest on an assumption that's simply false for the real model, not
+  just imprecise.** 8.4's plan assumed "a naive instruction mostly holds, a well-chosen attack breaks
+  it" — checking this directly (testing the *unattacked* baseline, and several genuinely mild
+  non-attacks alongside the real attack candidates) revealed this tiny model's baseline
+  instruction-following is far more fragile than that framing assumed: nearly any additional text after
+  the instruction broke it, attack or not. The fix wasn't tuning numbers, it was checking the premise
+  itself against real behaviour before building scoring logic on top of it — the same category of
+  "verify before you design" as §5's calibration-threshold check, just one level up (the mechanic's
+  shape, not a specific level's pass bar).
+- **When a real sweep shows every candidate in a set succeeding (or failing), that's the "canvas 17
+  already at 3 stars by default" anti-pattern from §5, and the fix doesn't require inventing a fake
+  negative case.** 8.4's first real defense sweep found all 4 candidate defenses resisted the target
+  attack — any first click would trivially solve the level. Rather than search for a weaker real defense
+  to include (more calibration cycles, no guarantee of success), the fix was adding a defense whose text
+  is **byte-identical to an already-established real failure** (the exact instruction level 1's attack
+  already broke, unreinforced) — guaranteed to fail without any new probing, and a genuinely plausible
+  thing a player might try first ("just repeat the same rule"), not a strawman. Worth remembering for
+  any future "test several options, find the one that works" level where a real sweep comes back
+  suspiciously one-sided: a guaranteed-real distractor built from an already-verified result is often
+  cheaper and more honest than hunting for a new real negative case.

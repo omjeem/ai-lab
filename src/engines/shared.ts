@@ -117,6 +117,62 @@ export function totalVariationDistance(p: readonly number[], q: readonly number[
   return sum / 2;
 }
 
+/**
+ * Recursive-descent parser for `+ - * / ( )` over real numbers — the whole
+ * grammar a calculator tool call actually needs, with real operator
+ * precedence, and no dynamic code execution (`eval`/`new Function`) of
+ * model-generated text. Shared by `toolRuntime`'s real calculator (World 7.4)
+ * and any engine that needs to compute a real, verifiable numeric answer at
+ * runtime rather than authoring one by hand.
+ */
+export function evaluateArithmetic(expression: string): number | null {
+  const tokens = expression.match(/\d+\.?\d*|[+\-*/()]/g);
+  if (!tokens || tokens.join('') !== expression.replace(/\s+/g, '')) return null;
+
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const next = () => tokens[pos++];
+
+  function parseExpression(): number | null {
+    let value = parseTerm();
+    if (value === null) return null;
+    while (peek() === '+' || peek() === '-') {
+      const op = next();
+      const rhs = parseTerm();
+      if (rhs === null) return null;
+      value = op === '+' ? value + rhs : value - rhs;
+    }
+    return value;
+  }
+
+  function parseTerm(): number | null {
+    let value = parseFactor();
+    if (value === null) return null;
+    while (peek() === '*' || peek() === '/') {
+      const op = next();
+      const rhs = parseFactor();
+      if (rhs === null || (op === '/' && rhs === 0)) return null;
+      value = op === '*' ? value * rhs : value / rhs;
+    }
+    return value;
+  }
+
+  function parseFactor(): number | null {
+    if (peek() === '(') {
+      next();
+      const value = parseExpression();
+      if (value === null || next() !== ')') return null;
+      return value;
+    }
+    const token = next();
+    if (token === undefined || Number.isNaN(Number(token))) return null;
+    return Number(token);
+  }
+
+  const result = parseExpression();
+  return pos === tokens.length && result !== null && Number.isFinite(result) ? result : null;
+}
+
 /** Turns non-negative weights into a distribution; all-zero falls back to uniform. */
 export function normalizeDistribution(weights: readonly number[]): number[] {
   if (weights.length === 0) return [];

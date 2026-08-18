@@ -286,6 +286,15 @@
           "tier": "browser-light",
           "xpReward": 135,
           "unlockRequires": ["7-2-grounded-generation"]
+        },
+        {
+          "id": "7-4-agent-loop",
+          "title": "Agent Loop",
+          "order": 4,
+          "file": "world-7-grounding-tools/7-4-agent-loop.json",
+          "tier": "browser-light",
+          "xpReward": 135,
+          "unlockRequires": ["7-3-tool-calling"]
         }
       ]
     }

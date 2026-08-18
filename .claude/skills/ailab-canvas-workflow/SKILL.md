@@ -6,7 +6,7 @@ description: Tooling and debugging workflow for building/verifying AI Learning L
 # AI Learning Lab canvas workflow
 
 Process notes from building canvases 14 through 20 (all of Worlds 1–6, 22 chapters) plus World 7's
-first three chapters (7-1 through 7-3) — specifically the parts that cost real time and aren't in
+first four chapters (7-1 through 7-4) — specifically the parts that cost real time and aren't in
 `plan-docs/REMAINING-WORK.md` (which covers per-chapter findings for Worlds 1–6) or
 `plan-docs/EXPANSION-PLAN.md` (the same, for World 7/8). Still worth reading before *revisiting* any
 canvas: the same model-loading and verification traps apply to fixes as much as to first builds.
@@ -97,6 +97,14 @@ No browser is preinstalled in this environment.
     Chapter progress (localStorage) does persist too, so clear only that between runs if a clean start
     matters: `await page.evaluate(() => localStorage.clear())` right after the first `goto` — this
     leaves the Cache API (model weights) untouched.
+  - **Don't run a heavy Node model-calibration script and a live Playwright verification against the
+    dev server at the same time.** Found while verifying World 7.4: running several
+    `AutoModelForCausalLM.from_pretrained` Node scripts concurrently with `next dev` starved the dev
+    server badly enough that its own page compiles hung indefinitely (`○ Compiling / ...` with no
+    further output, `curl` timing out against a port that was still genuinely `LISTEN`ing). Not an app
+    bug — a host-machine resource-contention issue. If the dev server seems wedged mid-verification,
+    check for exactly this (`ps` for other heavy Node processes) before assuming the app broke; killing
+    and restarting the dev server clean resolves it.
   - **A level's own HUD readout can collide with a canvas's identically-labelled text**, the same
     ambiguous-text trap as the concept-screen one above but recurring in a new place: `ChapterShell`
     renders a persistent `Readout` labelled with the level's own `passCriteria.metric` (e.g.
@@ -220,7 +228,7 @@ against real numbers and checking whether the *default* state already passes. If
 nothing for the level to teach.
 
 **Calibrate a causal-LM chapter's Node script with `dtype: 'q8'`, never the library default
-(`fp32`).** This is the single costliest mistake made building World 7.3, worth its own
+(`fp32`).** This is the single costliest mistake made building World 7.3/7.4, worth its own
 callout: `tinyCausalLM.ts` loads with `dtype: backend === 'webgpu' ? 'q4' : 'q8'`, and this
 environment cannot reliably provide WebGPU (§9) — so every real player on the WASM path gets a
 **q8-quantized** model, never the fp32 a bare `AutoModelForCausalLM.from_pretrained(id)` call

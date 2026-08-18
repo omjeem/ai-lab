@@ -19,6 +19,7 @@ import {
   spearmanCorrelation,
   kMeans,
   silhouetteScore,
+  evaluateArithmetic,
 } from '@/engines/shared';
 
 describe('createRng', () => {
@@ -231,5 +232,36 @@ describe('silhouetteScore', () => {
 
   it('returns 0 when every point shares one label', () => {
     expect(silhouetteScore([[0, 0], [1, 1]], [0, 0])).toBe(0);
+  });
+});
+
+describe('evaluateArithmetic', () => {
+  it('evaluates addition, subtraction, multiplication and division', () => {
+    expect(evaluateArithmetic('3 + 4')).toBe(7);
+    expect(evaluateArithmetic('10 - 2')).toBe(8);
+    expect(evaluateArithmetic('6 * 7')).toBe(42);
+    expect(evaluateArithmetic('20 / 4')).toBe(5);
+  });
+
+  it('respects operator precedence and parentheses', () => {
+    expect(evaluateArithmetic('2 + 3 * 4')).toBe(14);
+    expect(evaluateArithmetic('(2 + 3) * 4')).toBe(20);
+  });
+
+  it('handles decimals and negative results', () => {
+    expect(evaluateArithmetic('1.5 + 2.5')).toBe(4);
+    expect(evaluateArithmetic('3 - 10')).toBe(-7);
+  });
+
+  it('returns null for division by zero rather than Infinity/NaN', () => {
+    expect(evaluateArithmetic('5 / 0')).toBeNull();
+  });
+
+  it('returns null for anything that is not a plain arithmetic expression', () => {
+    expect(evaluateArithmetic('alert(1)')).toBeNull();
+    expect(evaluateArithmetic('3 + ')).toBeNull();
+    expect(evaluateArithmetic('')).toBeNull();
+    expect(evaluateArithmetic('process.exit()')).toBeNull();
+    expect(evaluateArithmetic('3 + 4; alert(1)')).toBeNull();
   });
 });

@@ -79,6 +79,21 @@ export interface CorpusDep {
   load(corpusId: string): Promise<string>;
 }
 
+export interface ToolResult {
+  ok: boolean;
+  output: string;
+}
+
+/**
+ * A real, deterministic, offline-safe tool an agent-loop engine can execute —
+ * no network call, no model involved. Implemented first as a calculator
+ * (real arithmetic, not `eval`) and a corpus lookup, both in
+ * `src/models/toolRuntime.ts`.
+ */
+export interface ToolDep {
+  run(toolName: string, args: Record<string, unknown>): Promise<ToolResult>;
+}
+
 /** A net the engine can train and inspect, implemented by /src/models. */
 export interface TrainableNetDep {
   forward(inputs: number[][]): number[];

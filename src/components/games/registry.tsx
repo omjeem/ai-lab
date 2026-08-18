@@ -124,6 +124,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./7-3-tool-calling/ToolCallCanvas').then((m) => m.ToolCallCanvas),
     { ssr: false, loading }
   ),
+  '7-4-agent-loop': dynamic(
+    () => import('./7-4-agent-loop/AgentLoopCanvas').then((m) => m.AgentLoopCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

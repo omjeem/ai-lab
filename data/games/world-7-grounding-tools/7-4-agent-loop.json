@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "id": "7-4-agent-loop",
+  "world": 7,
+  "worldTitle": "Grounding & Tools",
+  "chapterTitle": "Agent Loop",
+  "order": 4,
+  "concept": {
+    "shortExplanation": "An agent is a model that calls a real tool, reads the real result, and answers using it — the same tiny model from 7.3, now actually wired to a real calculator and a real lookup over the bundled fact corpus. Every tool call, every tool result, and every final answer below is real: the model really can't do this arithmetic in its head, and you'll watch it genuinely fail without the tool and genuinely succeed with it.",
+    "ahaMoment": "Tool use measurably extends what a tiny model can do — arithmetic it cannot do in its head becomes reliable once a real tool computes it and the result is fed back in. But the reliability of the whole loop is only as good as its weakest real step: getting the tool called correctly. Retrying blindly cannot rescue a fundamentally bad prompt — a well-built prompt on the first attempt beats a poorly-built one retried three times, verified directly against the real model."
+  },
+  "modelRequirement": {
+    "tier": "browser-light",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 92,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The 135M language model could not be downloaded. It is roughly 90MB — check your connection and available storage, then retry. It runs fully offline once cached."
+  },
+  "xpReward": 135,
+  "unlockRequires": ["7-3-tool-calling"],
+  "levels": [
+    {
+      "id": "7-4-l1",
+      "title": "One Real Tool Hop",
+      "difficulty": "easy",
+      "instructions": "For each question below, the model must call the real calculator, get back its real result, and then state the real final answer using that result. Choose how many worked examples to show it first, then run it against all 4 questions.",
+      "engineType": "agentLoop",
+      "engineConfig": {
+        "mode": "single-hop",
+        "maxTokens": 40,
+        "finalAnswerMaxTokens": 16,
+        "tasks": [
+          { "question": "What is 4867 plus 3931?", "canonicalExpression": "4867 + 3931" },
+          { "question": "What is 158 times 23?", "canonicalExpression": "158 * 23" },
+          { "question": "What is 900 minus 275?", "canonicalExpression": "900 - 275" },
+          { "question": "What is 62 times 14?", "canonicalExpression": "62 * 14" }
+        ]
+      },
+      "passCriteria": {
+        "metric": "toolHopAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40,
+      "hints": [
+        "None of these numbers are small enough for the model to just know the answer — it genuinely needs the real tool. Show it how to call the tool first.",
+        "Real measured behaviour: with zero worked examples the model never successfully completes the loop. Each worked example you add measurably improves it.",
+        "Checked directly against the real model, at the precision it actually runs at in your browser: 0 examples → 0 of 4 real hops succeed; 1 example → 3 of 4; 2 examples → 4 of 4."
+      ]
+    },
+    {
+      "id": "7-4-l2",
+      "title": "Pick the Right Tool, Then Use It",
+      "difficulty": "medium",
+      "instructions": "Two tools are available: calculator and lookup. For each instruction, choose which tool to demonstrate last — the same lever from 7.3 — then run it: the real model must pick the right tool, call it, and state the real final answer.",
+      "engineType": "agentLoop",
+      "engineConfig": {
+        "mode": "tool-select-hop",
+        "maxTokens": 30,
+        "finalAnswerMaxTokens": 20,
+        "corpus": "retrieval-facts",
+        "instructions": [
+          { "text": "What is 84 minus 19?", "expectedTool": "calculator", "canonicalExpression": "84 - 19" },
+          { "text": "How deep is the Mariana Trench?", "expectedTool": "lookup", "factId": "mariana" },
+          { "text": "What is 6 times 11?", "expectedTool": "calculator", "canonicalExpression": "6 * 11" },
+          { "text": "How tall is the Burj Khalifa?", "expectedTool": "lookup", "factId": "burj" },
+          { "text": "What is 200 plus 300?", "expectedTool": "calculator", "canonicalExpression": "200 + 300" },
+          { "text": "How long is the Great Wall of China?", "expectedTool": "lookup", "factId": "greatwall" }
+        ]
+      },
+      "passCriteria": {
+        "metric": "agentTaskAccuracy",
+        "threshold": 0.4,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.4, "stars": 1 },
+        { "threshold": 0.6, "stars": 2 },
+        { "threshold": 0.8, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "hints": [
+        "This reuses 7.3's discovery: the real model picks whichever tool you demonstrated last, almost regardless of the instruction. Put the tool that actually fits last.",
+        "The lookup tool is checked against the same real fact corpus 7.1 and 7.2 used — its results are real bundled facts, not invented ones, and the calculator really evaluates your expression.",
+        "Checked directly: the lookup half of this level is very reliable once the right tool is picked. The calculator half is real but noisier — verified live, one full run reached 4 of these 6 instructions correct end to end. Real, sometimes-imperfect small-model behaviour, not a bug to route around."
+      ]
+    },
+    {
+      "id": "7-4-l3",
+      "title": "Tune the Budget",
+      "difficulty": "hard",
+      "instructions": "Same kind of tasks as before, but each real attempt now uses real randomness — a lucky or unlucky draw. Choose how many worked examples to show, and how many real retries each task gets if the first attempt fails, then run the whole batch.",
+      "engineType": "agentLoop",
+      "engineConfig": {
+        "mode": "budget-tuning",
+        "maxTokens": 40,
+        "finalAnswerMaxTokens": 16,
+        "temperature": 0.7,
+        "sampleTopK": 20,
+        "retryBudgetMax": 2,
+        "tasks": [
+          { "question": "What is 4867 plus 3931?", "canonicalExpression": "4867 + 3931" },
+          { "question": "What is 900 minus 275?", "canonicalExpression": "900 - 275" },
+          { "question": "What is 62 times 14?", "canonicalExpression": "62 * 14" }
+        ]
+      },
+      "passCriteria": {
+        "metric": "tasksSolvedRate",
+        "threshold": 0.3,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.3, "stars": 1 },
+        { "threshold": 0.6, "stars": 2 },
+        { "threshold": 0.9, "stars": 3 }
+      ],
+      "xpReward": 50,
+      "hints": [
+        "A bigger retry budget can't fix a prompt that's fundamentally broken — try 0 examples with the full retry budget and watch it still fail every task.",
+        "Real randomness means even a good prompt occasionally needs a second real attempt — that's genuine model variance, not a bug.",
+        "Checked directly against the real model, with real random sampling and a budget of 2 real attempts per task: 0 examples solved 0 of 3 tasks even with every retry used; 1 example solved all 3; 2 examples solved 2 of 3 in one real run — more examples generally help, but real sampling adds genuine variance that isn't perfectly monotonic and that retries alone don't erase."
+      ]
+    }
+  ]
+}

@@ -297,6 +297,24 @@
           "unlockRequires": ["7-3-tool-calling"]
         }
       ]
+    },
+    {
+      "world": 8,
+      "title": "Scale, Efficiency & Safety",
+      "subtitle": "What changes when a model has to run for real",
+      "accent": "#ff5f4e",
+      "directory": "world-8-efficiency-safety",
+      "chapters": [
+        {
+          "id": "8-1-quantization",
+          "title": "Quantization Tradeoffs",
+          "order": 1,
+          "file": "world-8-efficiency-safety/8-1-quantization.json",
+          "tier": "browser-heavy",
+          "xpReward": 135,
+          "unlockRequires": ["7-4-agent-loop"]
+        }
+      ]
     }
   ],
   "ranks": [

@@ -106,7 +106,7 @@ describe('registry against the shipped curriculum', () => {
 
   it('accepts every chapter definition on disk', () => {
     const games = loadAllGames();
-    expect(games).toHaveLength(26);
+    expect(games).toHaveLength(27);
 
     for (const game of games) {
       registerChapterModel(

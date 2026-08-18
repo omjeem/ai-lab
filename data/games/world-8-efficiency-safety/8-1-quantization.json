@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "8-1-quantization",
+  "world": 8,
+  "worldTitle": "Scale, Efficiency & Safety",
+  "chapterTitle": "Quantization Tradeoffs",
+  "order": 1,
+  "concept": {
+    "shortExplanation": "Every model so far in this course has run at whatever precision transformers.js happened to pick. Quantization is the deliberate choice to store a model's weights with fewer bits — this chapter loads the exact same model (SmolLM2-135M-Instruct) twice, once at full fp32 precision and once rounded down to q8, and compares them directly. Nothing here is simulated: both are real forward passes through real downloaded weights, and every divergence, timing number and confidence gap you see is measured live from those two runs, not assumed from how quantization is 'supposed to' behave.",
+    "ahaMoment": "Quantization is not a uniform discount. It reliably shrinks a model and its download time, it does not reliably slow down or speed up a single forward pass at this size, and its real cost shows up unevenly — concentrated in exactly the kind of precise, low-frequency answers (specific digits) you'd least want to lose confidence in."
+  },
+  "modelRequirement": {
+    "tier": "browser-heavy",
+    "modelId": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "estimatedSizeMB": 677,
+    "fallbackMessage": null,
+    "loadFailureMessage": "The two model precisions this chapter compares could not be downloaded. Check your connection and retry — once cached, this chapter runs fully offline."
+  },
+  "xpReward": 135,
+  "unlockRequires": ["7-4-agent-loop"],
+  "levels": [
+    {
+      "id": "8-1-l1",
+      "title": "Spot the Divergence",
+      "difficulty": "easy",
+      "instructions": "Below are 8 everyday prompts. For each one, the reference model's (fp32) real top answer and its confidence are already shown. Predict whether the same model, quantized down to q8, will land on a genuinely different top token — you'll see the real q8 answer the moment you submit.",
+      "engineType": "quantizationTradeoff",
+      "engineConfig": {
+        "mode": "compare-outputs",
+        "topK": 5,
+        "prompts": [
+          "The capital of France is",
+          "The opposite of hot is",
+          "My favorite color is",
+          "The chemical symbol for gold is",
+          "The sky is the color",
+          "The first president of the United States was",
+          "Roses are red, violets are",
+          "A group of lions is called a"
+        ]
+      },
+      "passCriteria": {
+        "metric": "divergenceAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 40,
+      "hints": [
+        "Try the prompts where the model has to make a genuine judgment call. A factual completion it's already very confident about — a well-known capital, a chemical symbol — rarely flips between precisions. A completion it's already unsure of is where rounding the weights can tip it to something else.",
+        "Confidence is the real tell: in the actual fp32 run, every prompt that goes on to flip under q8 starts from a top-token probability under 0.4. Every prompt that stays identical starts at 0.4 or higher. A close call is fragile; a landslide isn't.",
+        "Checked directly against the real q8 and fp32 forward passes: 'The sky is the color' (of → you), 'The first president of the United States was' (John → elected), 'Roses are red, violets are' (white → blue), and 'A group of lions is called a' (pride → lion) all genuinely diverge. 'The capital of France is', 'The opposite of hot is', 'My favorite color is', and 'The chemical symbol for gold is' do not — both precisions land on the identical top token."
+      ]
+    },
+    {
+      "id": "8-1-l2",
+      "title": "Predict the Tradeoff",
+      "difficulty": "medium",
+      "instructions": "Both real precisions have already downloaded onto your machine. Before revealing the real measurements, predict three things about them: which variant is smaller, which one loaded faster, and which one runs a single forward pass faster.",
+      "engineType": "quantizationTradeoff",
+      "engineConfig": {
+        "mode": "compare-speed",
+        "prompts": ["Explain why the sky is blue in one sentence."]
+      },
+      "passCriteria": {
+        "metric": "tradeoffPredictionAccuracy",
+        "threshold": 0.3,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.3, "stars": 1 },
+        { "threshold": 0.5, "stars": 2 },
+        { "threshold": 0.9, "stars": 3 }
+      ],
+      "xpReward": 45,
+      "hints": [
+        "Two of these three have an obvious lever: quantization's whole job is shrinking the file that stores the weights, and a smaller file has less to move over the network.",
+        "The third question — which precision runs a single already-loaded forward pass faster — is a genuinely open one at this model's tiny size. Dequantizing weights back to float during the pass has its own real cost, and a 135M-parameter model is small enough for that cost to compete with whatever quantization saves.",
+        "Checked directly: q8's real file is about a quarter the size of fp32's (roughly 137MB vs 540MB), so it is always the smaller, and — over a real network fetch — the faster-loading of the two. Per-token inference speed does not follow the same pattern in repeated real measurements; there is no safe universal answer for that one, only your own run's real numbers."
+      ]
+    },
+    {
+      "id": "8-1-l3",
+      "title": "Numeric Confidence",
+      "difficulty": "hard",
+      "instructions": "Both precisions answer all 8 real factual questions from the retrieval corpus, and both usually get the number right. The real question is how confident each one is in the true digits once you strip away the generic words around them. For each fact, predict which precision is really more confident in the correct answer.",
+      "engineType": "quantizationTradeoff",
+      "engineConfig": {
+        "mode": "compare-confidence",
+        "corpus": "retrieval-facts",
+        "factIds": ["reef", "amazon", "burj", "mariana", "venus", "sahara", "greatwall", "statue-liberty"]
+      },
+      "passCriteria": {
+        "metric": "confidencePredictionAccuracy",
+        "threshold": 0.5,
+        "comparator": "gte"
+      },
+      "starsRules": [
+        { "threshold": 0.5, "stars": 1 },
+        { "threshold": 0.75, "stars": 2 },
+        { "threshold": 1, "stars": 3 }
+      ],
+      "xpReward": 50,
+      "hints": [
+        "Don't trust the model's very first response token — nearly every answer starts the same generic way regardless of which precision produced it, or what the real fact even is. The real signal is in what happens once it actually commits to the digits.",
+        "Once you isolate the token that is actually the number (not the formatting around it), one precision is consistently more certain of the correct digits than the other across this whole fact set — worth checking whether that pattern really holds before assuming it's random.",
+        "Checked directly across all 8 real facts, teacher-forced against each one's true numeric answer: fp32 shows lower real surprisal (more confidence) on the actual digits than q8 in all 8 of 8 cases. The direction never flips in this measured set — even though a naive first-token confidence check shows no consistent pattern at all, which is exactly why the first hint says to ignore it."
+      ]
+    }
+  ]
+}

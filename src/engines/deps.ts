@@ -94,6 +94,36 @@ export interface ToolDep {
   run(toolName: string, args: Record<string, unknown>): Promise<ToolResult>;
 }
 
+export interface PrecisionRunResult {
+  /** Real top-k next-token distribution from this one forward pass. */
+  topK: TokenDistribution;
+  /** Real wall-clock time this call's tokenize + forward pass took. */
+  inferenceTimeMs: number;
+}
+
+/**
+ * One precision variant of a model — chapter 8.1 injects two of these (an
+ * fp32 reference and a q8 quantized variant of the same underlying model) so
+ * the engine never has to know which is "real" and which is "the fast one".
+ */
+export interface PrecisionModelDep {
+  /** Human label, e.g. "fp32" or "q8" — display only, never branched on by the engine. */
+  readonly label: string;
+  /** Real measured download size in MB for this variant (from the model host, not a guess). */
+  readonly sizeMB: number;
+  /** Ensures the model is loaded, returning the real wall-clock time this call took (near-zero if already loaded). */
+  ensureLoaded(): Promise<number>;
+  /** Real top-k distribution after one real forward pass, with its own timing. */
+  run(prompt: string, topK: number): Promise<PrecisionRunResult>;
+  /**
+   * Real per-token surprisal (bits, `-log2 p`) for every token of
+   * `continuation` as it would follow `prompt`, one real teacher-forced
+   * forward pass per token — each token's probability is read from that
+   * step's actual full-vocabulary softmax, not sampled or decoded.
+   */
+  continuationSurprisal(prompt: string, continuation: string): Promise<number[]>;
+}
+
 /** A net the engine can train and inspect, implemented by /src/models. */
 export interface TrainableNetDep {
   forward(inputs: number[][]): number[];

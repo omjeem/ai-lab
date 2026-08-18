@@ -128,6 +128,10 @@ const REGISTRY: Record<string, GameComponent> = {
     () => import('./7-4-agent-loop/AgentLoopCanvas').then((m) => m.AgentLoopCanvas),
     { ssr: false, loading }
   ),
+  '8-1-quantization': dynamic(
+    () => import('./8-1-quantization/QuantizationCanvas').then((m) => m.QuantizationCanvas),
+    { ssr: false, loading }
+  ),
 };
 
 export function getGameComponent(chapterId: string): GameComponent | null {

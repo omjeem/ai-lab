@@ -1,6 +1,6 @@
 ---
 name: ailab-activity-sync
-description: How the offline activity queue and its background sync manager work in this repo — the event schema, the queue's IndexedDB cap/dedupe behavior, why the recurring sync timer now skips its network probe when the queue is empty, and why this area deliberately has no unit test for that specific fix. Load this before touching src/lib/offlineQueue.ts, src/lib/syncManager.ts, src/types/activity.ts, or src/app/api/activity/route.ts.
+description: How the offline activity queue and its background sync manager work in this repo — the event schema, the queue's IndexedDB cap/dedupe behavior, why enqueueActivity() fires an immediate single-event POST instead of waiting for the interval, why the recurring sync timer skips its network probe when the queue is empty, and why this area deliberately has no unit test for either fix. Load this before touching src/lib/offlineQueue.ts, src/lib/syncManager.ts, src/types/activity.ts, or src/app/api/activity/route.ts.
 ---
 
 # Activity queue and sync manager
@@ -13,14 +13,45 @@ description: How the offline activity queue and its background sync manager work
   (`chapter_jumped_ahead`, `chapter_shared_link_opened`) as a model.
 - `src/lib/offlineQueue.ts` — `enqueueActivity()` writes to IndexedDB, capped at 5000 events
   (oldest dropped first, never newest), deduped only by `eventId` (never by content — queuing the
-  "same" event twice with two different ids just means two rows). `queueSize()` is a cheap
-  `db.count()` — already exported, already used by the sync manager's idle check (see below); don't
-  reintroduce a duplicate way to get this number.
+  "same" event twice with two different ids just means two rows). After the write succeeds it also
+  fires `sendImmediately()` (fire-and-forget, same file): a single-event POST to `/api/activity`
+  that clears itself out of the queue on success. `queueSize()` is a cheap `db.count()` — already
+  exported, already used by the sync manager's idle check (see below); don't reintroduce a
+  duplicate way to get this number.
 - `src/lib/syncManager.ts` — `startSyncManager()`, mounted once at app root in
   `AppShell.tsx`. Runs on a recurring interval (30s default) plus the browser's
   `online`/`visibilitychange` events. `syncOnce()` posts a batch to `/api/activity` and clears
   exactly the event ids the server confirms via `clearSynced()` — never a blanket clear, since
-  events queued mid-flight must survive a sync that started before they existed.
+  events queued mid-flight must survive a sync that started before they existed. This is now the
+  *fallback* path (offline at enqueue time, or `sendImmediately()` failed) rather than the only
+  delivery path — see below.
+
+## Instant delivery (`sendImmediately`)
+
+`enqueueActivity()` used to only write to IndexedDB and let the interval/online/visibility
+triggers in `syncManager.ts` do the actual sending — meaning a freshly-recorded event could sit
+for up to 30s before reaching the server. It now also calls `sendImmediately(event)` right after
+the IndexedDB write succeeds: a direct `fetch('/api/activity', { method: 'POST', body: { events:
+[event] } })` for just that one event. On a 200 with the event id present in
+`persistedEventIds`, it calls `clearSynced([event.eventId])` immediately. On any failure (offline,
+non-200, thrown error) it does nothing and swallows the error — the event is already sitting in
+the queue from the write above, so `syncManager.ts`'s existing interval/online/visibility triggers
+pick it up later with no special-casing needed.
+
+This lives in `offlineQueue.ts`, not `syncManager.ts` — it does its own `fetch` rather than calling
+`syncOnce()`, specifically to avoid a circular import (`syncManager.ts` already imports *from*
+`offlineQueue.ts`). It also intentionally does not add any retry/backoff logic beyond the one
+attempt: "no caching" here means don't build new delivery infrastructure for this path, since the
+queue + existing sync manager already *is* the retry mechanism.
+
+**Race with the interval sync is safe by design, not by luck**: if `syncOnce()`'s batch sync picks
+up the same still-queued event before `sendImmediately()`'s single-event POST clears it (or vice
+versa), both requests hit the server. `activity.eventId` has a unique index
+(`src/lib/mongodb.ts`), so the second insert throws a Mongo duplicate-key error (code 11000), which
+`route.ts`'s `extractDuplicateIds()` already treats as "persisted" and returns in
+`persistedEventIds` — so the client still clears it correctly. Don't add de-duplication logic to
+prevent this race; the existing unique-index + duplicate-key handling is what makes it safe to not
+bother.
 
 ## The idle-polling fix
 
@@ -36,30 +67,41 @@ just came back online; the tab just became visible again) worth refreshing the c
 indicator on. The thing being fixed is *blind, unconditional polling on a fixed timer regardless of
 whether there's anything to do* — not "probe less often" in general.
 
-If you're asked to make this "sync faster" or "sync immediately when something is queued": don't
-wire `enqueueActivity()` to trigger `syncManager.ts` directly. This was considered and rejected —
-`syncManager.ts` already imports *from* `offlineQueue.ts`, so the reverse direction risks a
-circular import, and nothing in this app reads queued activity live; background telemetry doesn't
-need sub-30s latency. The existing interval + connectivity-event triggers are the right shape;
-only the *unconditional probing* was the bug.
+This idle-skip only applies to the interval-tick fallback path. It has nothing to do with instant
+delivery, which is handled separately by `sendImmediately()` in `offlineQueue.ts` (see above) — that
+path fires unconditionally on every `enqueueActivity()` call, queue-empty or not, since it's sending
+the one event that was just enqueued.
 
-## Why there's no unit test for this specific change
+If you're asked to make the *fallback* sync faster: don't wire `enqueueActivity()` to call
+`syncOnce()` from `syncManager.ts` directly — `syncManager.ts` already imports *from*
+`offlineQueue.ts`, so the reverse direction risks a circular import. `sendImmediately()`'s
+standalone `fetch` (above) is how instant delivery was actually built, precisely to sidestep this.
+The interval + connectivity-event triggers remain the right shape for the fallback path itself;
+only the *unconditional probing on an empty queue* was ever the bug there.
+
+## Why there's no unit test for either fix
 
 This repo has no `fake-indexeddb` dependency and no existing timer-mocked (`vi.useFakeTimers()`)
-test anywhere — introducing that machinery for one one-line early-return branch was judged not
-worth it, especially since `startSyncManager()` itself no-ops entirely outside a browser
-(`typeof window === 'undefined'`) and this project's vitest config runs in a plain Node
-environment, not jsdom. The change was verified by direct code inspection (the guard runs strictly
-before `running` is set, so it can't deadlock a later real sync) rather than an automated test. If
-you're adding more logic to `syncManager.ts` in the future and it's getting complex enough that
-"read it carefully" stops being sufficient verification, that's the point to introduce
+test anywhere — introducing that machinery for a one-line early-return branch (the idle-skip) or a
+fire-and-forget `fetch` call with two outcomes (`sendImmediately`) was judged not worth it,
+especially since `startSyncManager()` itself no-ops entirely outside a browser (`typeof window ===
+'undefined'`) and this project's vitest config runs in a plain Node environment, not jsdom. Both
+changes were verified by direct code inspection rather than an automated test: the idle-skip guard
+runs strictly before `running` is set (can't deadlock a later real sync); `sendImmediately`'s only
+observable side effect on failure is "do nothing," and its success path reuses the already-tested
+`clearSynced()`. If you're adding more logic to either file in the future and it's getting complex
+enough that "read it carefully" stops being sufficient verification, that's the point to introduce
 `fake-indexeddb` + fake timers properly — not before.
 
 ## Verifying this live
 
-There's no way to observe "no network request fired" faster than the interval itself without
-temporarily passing a shorter `intervalMs` through `SyncManagerOptions` (which `AppShell.tsx`
-doesn't currently expose) — a real browser check means either waiting out a full 30s window while
-watching DevTools → Network for `/api/activity` HEAD requests with an empty queue, or temporarily
-patching `AppShell.tsx`'s `startSyncManager({...})` call to pass a short `intervalMs` for the
-duration of the check and reverting it before committing.
+For the interval idle-skip: there's no way to observe "no network request fired" faster than the
+interval itself without temporarily passing a shorter `intervalMs` through `SyncManagerOptions`
+(which `AppShell.tsx` doesn't currently expose) — a real browser check means either waiting out a
+full 30s window while watching DevTools → Network for `/api/activity` HEAD requests with an empty
+queue, or temporarily patching `AppShell.tsx`'s `startSyncManager({...})` call to pass a short
+`intervalMs` for the duration of the check and reverting it before committing.
+
+For `sendImmediately`: much easier — trigger any event (e.g. complete a level) with DevTools →
+Network open and confirm a `POST /api/activity` fires immediately, with a body containing exactly
+that one event, well before the 30s interval would have ticked.

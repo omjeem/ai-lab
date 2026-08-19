@@ -9,7 +9,7 @@
  * else (Section 9).
  */
 import { getDb, ACTIVITY_STORE } from '@/models/modelCache';
-import type { ActivityEvent, ActivityEventType } from '@/types/activity';
+import type { ActivityEvent, ActivityEventType, ActivityIngestResponse } from '@/types/activity';
 
 /** Hard cap so a long offline stretch cannot fill the user's storage. */
 const MAX_QUEUE = 5000;
@@ -47,10 +47,34 @@ export async function enqueueActivity(input: EnqueueInput): Promise<ActivityEven
       if (oldest[0]) await db.delete(ACTIVITY_STORE, (oldest[0] as ActivityEvent).eventId);
     }
     await db.put(ACTIVITY_STORE, event);
-    return event;
   } catch {
     // Telemetry must never break gameplay.
     return null;
+  }
+
+  // Try to deliver right away instead of waiting for the sync manager's next
+  // tick. If this fails (offline, server error), the event just stays queued
+  // and the existing interval/online/visibility sync picks it up later — no
+  // retry logic needed here.
+  void sendImmediately(event);
+  return event;
+}
+
+async function sendImmediately(event: ActivityEvent): Promise<void> {
+  try {
+    const response = await fetch('/api/activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events: [event] }),
+    });
+    if (!response.ok) return;
+
+    const payload = (await response.json()) as ActivityIngestResponse;
+    if (payload.ok && payload.persistedEventIds.includes(event.eventId)) {
+      await clearSynced([event.eventId]);
+    }
+  } catch {
+    // No connection — leave it queued.
   }
 }
 

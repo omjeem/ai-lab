@@ -13,7 +13,7 @@ import { usePathname } from 'next/navigation';
 import { Cpu, Trash2, Wifi, WifiOff, Volume2, VolumeX } from 'lucide-react';
 import { detectCapabilities, type DeviceCapabilities } from '@/lib/deviceCapabilities';
 import { startSyncManager } from '@/lib/syncManager';
-import { clearQueue } from '@/lib/offlineQueue';
+import { clearQueue, enqueueActivity } from '@/lib/offlineQueue';
 import { useGameProgressStore } from '@/store/useGameProgressStore';
 import { cx, Tag } from '@/components/ui';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -32,6 +32,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   // The sync manager runs for the whole app lifetime, not per screen.
   useEffect(() => startSyncManager({ onConnectivityChange: setOnline }), []);
+
+  // The sequential path through the app — one event per route change, only
+  // once a player exists (Section 8's onboarding disclosure already covers
+  // this as "anonymous play activity").
+  const userId = useGameProgressStore((s) => s.userId);
+  useEffect(() => {
+    if (!userId || !pathname) return;
+    // One frame's delay so document.title reflects the new route's metadata
+    // (Next sets it just before paint) rather than the page being left.
+    const frame = requestAnimationFrame(() => {
+      void enqueueActivity({
+        userId,
+        type: 'page_viewed',
+        detail: { path: pathname, title: document.title },
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname, userId]);
 
   const isAdmin = pathname?.startsWith('/admin') ?? false;
   if (isAdmin) return <>{children}</>;

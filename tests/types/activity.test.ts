@@ -7,6 +7,10 @@ describe('activityEventTypeSchema', () => {
     expect(activityEventTypeSchema.safeParse('chapter_jumped_ahead').success).toBe(true);
   });
 
+  it('accepts page_viewed, fired on every route change once onboarded', () => {
+    expect(activityEventTypeSchema.safeParse('page_viewed').success).toBe(true);
+  });
+
   it('still rejects an unknown event type', () => {
     expect(activityEventTypeSchema.safeParse('chapter_teleported').success).toBe(false);
   });
@@ -31,6 +35,17 @@ describe('activityEventSchema with the new types', () => {
 
   it('accepts a jumped-ahead event with no detail', () => {
     const result = activityEventSchema.safeParse({ ...base, type: 'chapter_jumped_ahead' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a page_viewed event with its path detail, no chapterId required', () => {
+    const result = activityEventSchema.safeParse({
+      eventId: 'evt-2',
+      userId: 'user-1',
+      timestamp: Date.now(),
+      type: 'page_viewed',
+      detail: { path: '/map' },
+    });
     expect(result.success).toBe(true);
   });
 });

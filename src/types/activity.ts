@@ -18,6 +18,8 @@ export const activityEventTypeSchema = z.enum([
   'chapter_shared_link_opened',
   /** Fired only when the prerequisite warning dialog was shown and the player chose to proceed. */
   'chapter_jumped_ahead',
+  /** Fired on every route change, once onboarded — the sequential path through the app. */
+  'page_viewed',
 ]);
 export type ActivityEventType = z.infer<typeof activityEventTypeSchema>;
 

@@ -72,7 +72,7 @@ export interface UserDocument {
   enrichment: RequestEnrichment;
 }
 
-/** Shape the admin dashboard reads. */
+/** Shape the admin dashboard reads — one row per user, plus their journey's edges. */
 export interface AdminUserRow {
   userId: string;
   name: string;
@@ -82,5 +82,33 @@ export interface AdminUserRow {
   city: string | null;
   ip: string | null;
   userAgent: string | null;
+  browser: string | null;
+  browserVersion: string | null;
+  os: string | null;
+  osVersion: string | null;
+  deviceType: string | null;
   eventCount: number;
+  latitude: string | null;
+  longitude: string | null;
+  geoTimezone: string | null;
+  host: string | null;
+  source: string | null;
+  /** Path and title of the earliest `page_viewed` event on record for this user. */
+  landingPage: string | null;
+  landingTitle: string | null;
+  /** Path of the most recent `page_viewed` event on record. */
+  lastPage: string | null;
+  platform: string | null;
+  touchSupport: boolean | null;
+  deviceMemoryGb: number | null;
+  cpuCores: number | null;
+  networkType: string | null;
+  colorScheme: string | null;
+  /** `navigator.languages`, joined for display. */
+  languages: string | null;
+  acceptLanguage: string | null;
+  timezone: string | null;
+  screen: string | null;
+  viewport: string | null;
+  pixelRatio: number | null;
 }

@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin, refreshSession } from '@/lib/requireAdmin';
 import { activityCollection, isDatabaseConfigured, usersCollection } from '@/lib/mongodb';
+import { shapeAdminUserRow, type PageViewEdges } from '@/lib/adminUsers';
 import type { AdminUserRow } from '@/types/user';
 
 export const runtime = 'nodejs';
@@ -40,27 +41,38 @@ export async function GET(request: Request): Promise<Response> {
     // One grouped count for the page, rather than a query per row.
     const ids = documents.map((d) => d.userId);
     const counts = new Map<string, number>();
+    const edges = new Map<string, PageViewEdges>();
     if (ids.length > 0) {
-      const grouped = await activity
-        .aggregate<{ _id: string; count: number }>([
-          { $match: { userId: { $in: ids } } },
-          { $group: { _id: '$userId', count: { $sum: 1 } } },
-        ])
-        .toArray();
-      for (const row of grouped) counts.set(row._id, row.count);
+      const [countRows, edgeRows] = await Promise.all([
+        activity
+          .aggregate<{ _id: string; count: number }>([
+            { $match: { userId: { $in: ids } } },
+            { $group: { _id: '$userId', count: { $sum: 1 } } },
+          ])
+          .toArray(),
+        // Earliest/latest page_viewed per user — landing page and last page.
+        activity
+          .aggregate<{ _id: string } & PageViewEdges>([
+            { $match: { userId: { $in: ids }, type: 'page_viewed' } },
+            { $sort: { timestamp: 1 } },
+            {
+              $group: {
+                _id: '$userId',
+                landingPage: { $first: '$detail.path' },
+                landingTitle: { $first: '$detail.title' },
+                lastPage: { $last: '$detail.path' },
+              },
+            },
+          ])
+          .toArray(),
+      ]);
+      for (const row of countRows) counts.set(row._id, row.count);
+      for (const row of edgeRows) edges.set(row._id, row);
     }
 
-    const rows: AdminUserRow[] = documents.map((doc) => ({
-      userId: doc.userId,
-      name: doc.name,
-      firstSeen: new Date(doc.firstSeen).toISOString(),
-      lastSeen: new Date(doc.lastSeen).toISOString(),
-      country: doc.enrichment?.geo?.country ?? null,
-      city: doc.enrichment?.geo?.city ?? null,
-      ip: doc.enrichment?.ip ?? null,
-      userAgent: doc.enrichment?.userAgent ?? null,
-      eventCount: counts.get(doc.userId) ?? 0,
-    }));
+    const rows: AdminUserRow[] = documents.map((doc) =>
+      shapeAdminUserRow(doc, counts.get(doc.userId) ?? 0, edges.get(doc.userId))
+    );
 
     return refreshSession(
       NextResponse.json({ ok: true, total, page, size, users: rows }),

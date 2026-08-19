@@ -266,44 +266,104 @@ function UserDrilldown({
         <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">
           {user.country && <Tag>{[user.city, user.country].filter(Boolean).join(', ')}</Tag>}
           {user.ip && <Tag>{user.ip}</Tag>}
+          {(user.browser || user.os) && (
+            <Tag>{[user.browser, user.os].filter(Boolean).join(' · ')}</Tag>
+          )}
+          {user.deviceType && user.deviceType !== 'desktop' && <Tag>{user.deviceType}</Tag>}
           <Tag tone="accent">{data?.total ?? user.eventCount} events</Tag>
         </div>
 
-        {user.userAgent && (
-          <p className="border-b border-line px-4 py-2 text-[11px] leading-relaxed text-muted">
-            {user.userAgent}
-          </p>
-        )}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 gap-3 border-b border-line p-4 sm:grid-cols-2">
+            <DetailSection
+              title="Location & network"
+              rows={[
+                { label: 'Country', value: user.country },
+                { label: 'City', value: user.city },
+                { label: 'IP address', value: user.ip },
+                {
+                  label: 'Coordinates',
+                  value: user.latitude && user.longitude ? `${user.latitude}, ${user.longitude}` : null,
+                },
+                { label: 'Geo timezone', value: user.geoTimezone },
+                { label: 'Host', value: user.host },
+              ]}
+            />
+            <DetailSection
+              title="How they arrived"
+              rows={[
+                { label: 'First seen', value: formatDate(user.firstSeen) },
+                { label: 'Last seen', value: formatDate(user.lastSeen) },
+                { label: 'First source', value: user.source },
+                { label: 'Landing page', value: user.landingPage },
+                { label: 'Landing title', value: user.landingTitle },
+                { label: 'Last page', value: user.lastPage },
+              ]}
+            />
+            <DetailSection
+              title="Device"
+              rows={[
+                { label: 'Device', value: user.deviceType },
+                { label: 'OS', value: [user.os, user.osVersion].filter(Boolean).join(' ') || null },
+                {
+                  label: 'Browser',
+                  value: [user.browser, user.browserVersion].filter(Boolean).join(' ') || null,
+                },
+                { label: 'Platform', value: user.platform },
+                { label: 'Screen', value: user.screen },
+                { label: 'Viewport', value: user.viewport },
+                { label: 'Pixel ratio', value: user.pixelRatio },
+                {
+                  label: 'Touch',
+                  value: user.touchSupport === null ? null : user.touchSupport ? 'yes' : 'no',
+                },
+                { label: 'Memory', value: user.deviceMemoryGb ? `${user.deviceMemoryGb} GB` : null },
+                { label: 'CPU cores', value: user.cpuCores },
+                { label: 'Network', value: user.networkType },
+                { label: 'Color scheme', value: user.colorScheme },
+              ]}
+            />
+            <DetailSection
+              title="Locale & agent"
+              rows={[
+                { label: 'Timezone', value: user.timezone },
+                { label: 'Languages', value: user.languages },
+                { label: 'Accept-Language', value: user.acceptLanguage },
+                { label: 'User-Agent', value: user.userAgent, wrap: true },
+              ]}
+            />
+          </div>
 
-        <ol className="flex-1 divide-y divide-line-faint overflow-y-auto">
-          {data?.events.map((event) => (
-            <li key={event.eventId} className="flex items-start gap-3 px-4 py-2.5">
-              <span className="readout w-32 shrink-0 text-[10px] text-muted">
-                {formatDate(new Date(event.timestamp).toISOString())}
-              </span>
-              <div className="min-w-0 flex-1">
-                <span className={cx('font-mono text-[11px]', toneFor(event.type))}>
-                  {event.type}
+          <ol className="divide-y divide-line-faint">
+            {data?.events.map((event) => (
+              <li key={event.eventId} className="flex items-start gap-3 px-4 py-2.5">
+                <span className="readout w-32 shrink-0 text-[10px] text-muted">
+                  {formatDate(new Date(event.timestamp).toISOString())}
                 </span>
-                {(event.chapterId || event.levelId) && (
-                  <span className="ml-2 text-[11px] text-secondary">
-                    {[event.chapterId, event.levelId].filter(Boolean).join(' · ')}
+                <div className="min-w-0 flex-1">
+                  <span className={cx('font-mono text-[11px]', toneFor(event.type))}>
+                    {event.type}
                   </span>
-                )}
-                {event.detail && (
-                  <p className="readout mt-0.5 truncate text-[10px] text-muted">
-                    {Object.entries(event.detail)
-                      .map(([k, v]) => `${k}=${typeof v === 'number' ? v.toFixed(3) : v}`)
-                      .join('  ')}
-                  </p>
-                )}
-              </div>
-            </li>
-          ))}
-          {data?.events.length === 0 && (
-            <li className="px-4 py-8 text-center text-xs text-muted">No activity recorded</li>
-          )}
-        </ol>
+                  {(event.chapterId || event.levelId) && (
+                    <span className="ml-2 text-[11px] text-secondary">
+                      {[event.chapterId, event.levelId].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                  {event.detail && (
+                    <p className="readout mt-0.5 truncate text-[10px] text-muted">
+                      {Object.entries(event.detail)
+                        .map(([k, v]) => `${k}=${typeof v === 'number' ? v.toFixed(3) : v}`)
+                        .join('  ')}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+            {data?.events.length === 0 && (
+              <li className="px-4 py-8 text-center text-xs text-muted">No activity recorded</li>
+            )}
+          </ol>
+        </div>
 
         <footer className="flex items-center gap-2 border-t border-line px-4 py-3">
           <Button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
@@ -318,6 +378,35 @@ function UserDrilldown({
           </Button>
         </footer>
       </div>
+    </div>
+  );
+}
+
+interface DetailRow {
+  label: string;
+  value: string | number | boolean | null | undefined;
+  /** Long values (the raw user-agent string) wrap instead of truncating. */
+  wrap?: boolean;
+}
+
+/** One labeled group of key/value rows — empty/null rows and empty sections are hidden. */
+function DetailSection({ title, rows }: { title: string; rows: DetailRow[] }) {
+  const visible = rows.filter((r) => r.value !== null && r.value !== undefined && r.value !== '');
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="border border-line p-3">
+      <p className="label mb-2 text-accent">{title}</p>
+      <dl className="divide-y divide-line-faint">
+        {visible.map((row) => (
+          <div key={row.label} className="flex items-start justify-between gap-3 py-1.5 text-[11px]">
+            <dt className="shrink-0 text-muted">{row.label}</dt>
+            <dd className={cx('text-right text-secondary', row.wrap ? 'wrap-break-word' : 'truncate')}>
+              {String(row.value)}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

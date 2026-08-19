@@ -20,6 +20,10 @@ export const activityEventTypeSchema = z.enum([
   'chapter_jumped_ahead',
   /** Fired on every route change, once onboarded — the sequential path through the app. */
   'page_viewed',
+  /** The builder-signature link on the chapter-complete screen was clicked. */
+  'portfolio_link_clicked',
+  /** The "book 15 min" link on the chapter-complete screen was clicked. */
+  'meeting_link_clicked',
 ]);
 export type ActivityEventType = z.infer<typeof activityEventTypeSchema>;
 

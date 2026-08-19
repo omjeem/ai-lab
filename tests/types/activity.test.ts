@@ -11,6 +11,11 @@ describe('activityEventTypeSchema', () => {
     expect(activityEventTypeSchema.safeParse('page_viewed').success).toBe(true);
   });
 
+  it('accepts the chapter-complete builder-links events', () => {
+    expect(activityEventTypeSchema.safeParse('portfolio_link_clicked').success).toBe(true);
+    expect(activityEventTypeSchema.safeParse('meeting_link_clicked').success).toBe(true);
+  });
+
   it('still rejects an unknown event type', () => {
     expect(activityEventTypeSchema.safeParse('chapter_teleported').success).toBe(false);
   });
@@ -47,5 +52,14 @@ describe('activityEventSchema with the new types', () => {
       detail: { path: '/map' },
     });
     expect(result.success).toBe(true);
+  });
+
+  it('accepts portfolio/meeting link clicks scoped to the chapter they were clicked from', () => {
+    expect(activityEventSchema.safeParse({ ...base, type: 'portfolio_link_clicked' }).success).toBe(
+      true
+    );
+    expect(activityEventSchema.safeParse({ ...base, type: 'meeting_link_clicked' }).success).toBe(
+      true
+    );
   });
 });

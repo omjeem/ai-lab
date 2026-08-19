@@ -25,6 +25,7 @@ import { playChapterCompleteTone, playCorrectTone } from '@/lib/sound';
 import { Button, Heading, Panel, Readout, StarRating, Tag, cx } from '@/components/ui';
 import { ShareButton } from '@/components/ui/ShareButton';
 import { ChapterFeedback } from '@/components/chapter/ChapterFeedback';
+import { BuilderLinks } from '@/components/chapter/BuilderLinks';
 
 export interface GameRenderProps {
   level: GameLevel;
@@ -653,6 +654,7 @@ function AhaReveal({
         </div>
 
         {userId && <ChapterFeedback chapterId={game.id} userId={userId} displayName={displayName} />}
+        <BuilderLinks userId={userId} chapterId={game.id} />
       </motion.div>
     </motion.div>
   );

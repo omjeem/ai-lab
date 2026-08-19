@@ -13,14 +13,26 @@ export function generateUserId(): string {
   return `usr-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
+/** Chromium-only Navigator extras with no standard TS DOM typing. */
+interface NavigatorWithExtras extends Navigator {
+  deviceMemory?: number;
+  connection?: { effectiveType?: string };
+}
+
 /**
  * Client-observable context the server cannot read from headers.
  *
- * Deliberately limited to what the onboarding disclosure covers: screen and
- * viewport size, timezone and language. No canvas or font fingerprinting.
+ * Deliberately limited to what the onboarding disclosure covers: screen,
+ * viewport, and device signals ordinary analytics collect — timezone,
+ * language(s), platform, touch/memory/CPU/network/color-scheme. No canvas or
+ * font fingerprinting. Every read stands alone so one unsupported API (most of
+ * the Chromium-only ones below are absent in Firefox/Safari) never drops the
+ * rest of the object.
  */
 export function collectClientContext(): CreateUserRequest['client'] {
   if (typeof window === 'undefined') return undefined;
+
+  const nav = navigator as NavigatorWithExtras;
 
   return {
     timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
@@ -31,6 +43,13 @@ export function collectClientContext(): CreateUserRequest['client'] {
     viewportHeight: window.innerHeight,
     devicePixelRatio: window.devicePixelRatio,
     language: navigator.language,
+    languages: navigator.languages ? Array.from(navigator.languages) : undefined,
+    platform: navigator.platform || undefined,
+    touchSupport: navigator.maxTouchPoints > 0,
+    deviceMemoryGb: nav.deviceMemory,
+    cpuCores: navigator.hardwareConcurrency,
+    networkType: nav.connection?.effectiveType,
+    colorScheme: window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   };
 }
 

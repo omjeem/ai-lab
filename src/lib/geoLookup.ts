@@ -34,6 +34,37 @@ export function isPrivateAddress(ip: string): boolean {
   );
 }
 
+/**
+ * Geo from Vercel's own edge headers — present on every request when this app
+ * is deployed on Vercel, at no cost and with no third-party call at all. This
+ * is preferred over `lookupGeo()` below whenever it's available; the paid
+ * lookup stays purely as a fallback for self-hosted deployments.
+ */
+export function geoFromVercelHeaders(headers: Headers): RequestEnrichment['geo'] {
+  const country = headers.get('x-vercel-ip-country');
+  if (!country) return null;
+
+  return {
+    country,
+    region: headers.get('x-vercel-ip-country-region'),
+    city: decodeHeaderValue(headers.get('x-vercel-ip-city')),
+    latitude: headers.get('x-vercel-ip-latitude'),
+    longitude: headers.get('x-vercel-ip-longitude'),
+    timezone: headers.get('x-vercel-ip-timezone'),
+    source: 'vercel',
+  };
+}
+
+/** Vercel URL-encodes the city name (e.g. "San%20Francisco"). */
+function decodeHeaderValue(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 export async function lookupGeo(ip: string | null): Promise<RequestEnrichment['geo']> {
   const template = process.env.GEO_LOOKUP_URL;
   if (!template || !ip || isPrivateAddress(ip)) return null;

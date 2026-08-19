@@ -3,14 +3,17 @@
  *
  * The client supplies only an id and a display name; everything else is
  * captured here from the request — IP with proxy headers respected, user agent,
- * referrer, language — plus optional geolocation when the operator has
- * configured a lookup of their own.
+ * referrer, language, device/browser/OS parsed from the UA, and geolocation
+ * (free from Vercel's own edge headers when deployed there, or an optional
+ * operator-configured lookup otherwise).
  */
 import { NextResponse } from 'next/server';
 import { createUserRequestSchema, type RequestEnrichment, type UserDocument } from '@/types/user';
 import { isDatabaseConfigured, usersCollection } from '@/lib/mongodb';
 import { clientIpFrom, rateLimit, readLimit } from '@/lib/rateLimit';
-import { lookupGeo } from '@/lib/geoLookup';
+import { geoFromVercelHeaders, lookupGeo } from '@/lib/geoLookup';
+import { parseDevice } from '@/lib/deviceParsing';
+import { deriveSource } from '@/lib/sourceParsing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,12 +46,20 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ ok: true, stored: false });
   }
 
+  const userAgent = request.headers.get('user-agent');
+  const referrer = request.headers.get('referer');
+  const host = request.headers.get('host');
+
   const enrichment: RequestEnrichment = {
     ip,
-    userAgent: request.headers.get('user-agent'),
-    referrer: request.headers.get('referer'),
+    userAgent,
+    referrer,
+    host,
     acceptLanguage: request.headers.get('accept-language'),
-    geo: await lookupGeo(ip),
+    // Free from Vercel's own edge network when deployed there; the paid,
+    // operator-configured lookup only runs as a fallback off Vercel.
+    geo: geoFromVercelHeaders(request.headers) ?? (await lookupGeo(ip)),
+    device: parseDevice(userAgent),
   };
 
   const now = new Date();
@@ -61,7 +72,13 @@ export async function POST(request: Request): Promise<Response> {
       {
         // A returning player refreshes their context without losing firstSeen.
         $set: { name, lastSeen: now, client, enrichment } satisfies Partial<UserDocument>,
-        $setOnInsert: { userId, firstSeen: now },
+        // firstReferrer/firstSource are sacred: never overwritten by a later re-registration.
+        $setOnInsert: {
+          userId,
+          firstSeen: now,
+          firstReferrer: referrer,
+          firstSource: deriveSource(referrer, host),
+        } satisfies Partial<UserDocument>,
       },
       { upsert: true }
     );

@@ -48,6 +48,14 @@ const CHAPTER_URLS = [
   '/world/5/chapter/5-4-residuals-layernorm',
   '/world/5/chapter/5-5-full-transformer',
   '/world/6/chapter/6-1-inspector-chat',
+  '/world/7/chapter/7-1-retrieval',
+  '/world/7/chapter/7-2-grounded-generation',
+  '/world/7/chapter/7-3-tool-calling',
+  '/world/7/chapter/7-4-agent-loop',
+  '/world/8/chapter/8-1-quantization',
+  '/world/8/chapter/8-2-context-length',
+  '/world/8/chapter/8-3-calibration-hallucination',
+  '/world/8/chapter/8-4-red-teaming',
 ];
 
 /** Fetched up front so the first offline launch has something to render. */
